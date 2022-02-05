@@ -10,8 +10,24 @@ use std::{
 
 #[derive(Serialize, Deserialize)]
 struct BevyModel {
-    #[serde(skip)]
-    scope: Scope,
+    systems: Vec<System>
+}
+
+impl BevyModel {
+    fn generate(&mut self) -> Scope {
+        let mut scope = Scope::new();
+        scope.import("bevy::prelude", "*");
+
+        scope.create_app(".add_system(hello_world_system)");
+        scope.create_query("hello_world");
+        scope
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct System {
+    name : String,
+    base : String,
 }
 
 trait BevyCodegen {
@@ -34,22 +50,15 @@ impl BevyCodegen for Scope {
 
 fn main() {
     let mut bevy_model = BevyModel {
-        scope: Scope::new(),
+        systems: vec![],
     };
 
-    bevy_model.scope.import("bevy::prelude", "*");
+    let hw_system = System{ name: "hello world".to_string(), base: "println!(\"Hello World!\");".to_string() };
+    bevy_model.systems.push(hw_system);
 
-    let hw = "hello_world";
-    let hws = format!(".add_system({}_system)", hw);
-    bevy_model
-        .scope
-        .create_app(&hws);
+    let scope = bevy_model.generate();
 
-    bevy_model
-        .scope
-        .create_query(&hw);
-
-    println!("{}", bevy_model.scope.to_string());
+    println!("{}", scope.to_string());
 
     let serialized = serde_json::to_string(&bevy_model).unwrap();
     println!("serialized = {}", serialized);
@@ -97,7 +106,7 @@ fn build_and_run() {
         .expect("failed to execute cargo run");
 }
 
-fn write_to_file(model: BevyModel) -> std::io::Result<()> {
+fn write_to_file(mut model: BevyModel) -> std::io::Result<()> {
     const BEVY_FOLDER: &str = "bevy";
     const SRC_FOLDER: &str = "src";
     if Path::new(BEVY_FOLDER).exists() {
@@ -109,7 +118,7 @@ fn write_to_file(model: BevyModel) -> std::io::Result<()> {
     fs::create_dir(BEVY_FOLDER.to_owned() + "/" + &SRC_FOLDER.to_owned())?;
     let mut bevy_lib_file =
         File::create(BEVY_FOLDER.to_owned() + "/" + &SRC_FOLDER.to_owned() + "/main.rs")?;
-    bevy_lib_file.write_all(model.scope.to_string().as_bytes())?;
+    bevy_lib_file.write_all(model.generate().to_string().as_bytes())?;
 
     let mut cargo_file = File::create(BEVY_FOLDER.to_owned() + "/Cargo.toml")?;
     cargo_file.write_all(
