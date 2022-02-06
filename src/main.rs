@@ -54,10 +54,10 @@ impl BevyModel {
         }
 
         for system in &self.startup_systems {
-            scope.create_query(&system.name, &system.base);
+            scope.create_query(&system.name, &system.content);
         }
         for system in &self.systems {
-            scope.create_query(&system.name, &system.base);
+            scope.create_query(&system.name, &system.content);
         }
         scope
     }
@@ -71,7 +71,7 @@ struct Meta{
 #[derive(Serialize, Deserialize, Clone)]
 struct System {
     name: String,
-    base: String,
+    content: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -217,7 +217,7 @@ fn main() {
 
     let hw_system = System {
         name: "hello_world".to_string(),
-        base: "println!(\"Hello World!\");".to_string(),
+        content: "println!(\"Hello World!\");".to_string(),
     };
     bevy_model.startup_systems.push(hw_system);
 
@@ -233,7 +233,7 @@ fn main() {
     build_and_run(bevy_model);
 }
 
-fn build_and_run(mut model: BevyModel) {
+fn build_and_run(model: BevyModel) {
     let path = model.model_meta.name;
     println!("fmt");
     let _fmt = Command::new("cargo")
@@ -301,30 +301,30 @@ fn write_to_file(mut model: BevyModel) -> std::io::Result<()> {
     bevy_lib_file.write_all(model.generate().to_string().as_bytes())?;
 
     let mut cargo_file = File::create(bevy_folder.to_owned() + "/Cargo.toml")?;
-    let buf = r#"[package]
-    name = "bevy_game"
-    version = "0.1.0"
-    edition = "2021"
-    
-    # Enable only a small amount of optimization in debug mode
-    [profile.dev]
-    opt-level = 1
-    
-    # Enable high optimizations for dependencies (incl. Bevy), but not for our code:
-    [profile.dev.package."*"]
-    opt-level = 3
+    let buf = format!(r#"[package]
+name = "{meta_name}"
+version = "0.1.0"
+edition = "2021"
 
-    # Maximize release performance with Link-Time-Optimization
-    [profile.release]
-    lto = "thin"
-    codegen-units = 1
+# Enable only a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
 
-    [target.'cfg(target_os = "linux")'.dependencies]
-    winit = { version = "0.25", features=["x11"]}
-    
-    [dependencies.bevy]
-    version = "0.6"
-    "#;
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3
+
+# Maximize release performance with Link-Time-Optimization
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+[target.'cfg(target_os = "linux")'.dependencies]
+winit = {{ version = "0.25", features=["x11"]}}
+
+[dependencies.bevy]
+version = "0.6"
+"#, meta_name = bevy_folder);
     let mut buf2 = buf.to_owned();
 
     if model.bevy_settings.features.is_empty() {
