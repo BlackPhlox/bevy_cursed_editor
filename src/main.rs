@@ -64,7 +64,7 @@ impl BevyModel {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-struct Meta{
+struct Meta {
     name: String,
 }
 
@@ -130,7 +130,7 @@ enum Feature {
 }
 
 impl Feature {
-    fn to_feature(self) -> &'static str {
+    fn to_feature(&self) -> &'static str {
         match self {
             Feature::Default => "default",
             Feature::BevyAudio => "bevy_audio",
@@ -186,7 +186,7 @@ impl BevyCodegen for Scope {
     }
 
     fn create_query(&mut self, name: &str, content: &str) -> &mut Function {
-        self.new_fn(format!("{}", name).as_str()).line(content)
+        self.new_fn(name).line(content)
     }
 
     fn create_component(&mut self, name: &str) -> &mut Struct {
@@ -196,7 +196,9 @@ impl BevyCodegen for Scope {
 
 fn main() {
     let mut bevy_model = BevyModel {
-        model_meta: Meta { name: "bevy_test".to_string() },
+        model_meta: Meta {
+            name: "bevy_test".to_string(),
+        },
         plugins: vec![],
         components: vec![],
         startup_systems: vec![],
@@ -296,12 +298,13 @@ fn write_to_file(mut model: BevyModel) -> std::io::Result<()> {
     fs::create_dir(bevy_folder.to_owned() + "/" + &SRC_FOLDER.to_owned())?;
     let mut bevy_lib_file =
         File::create(bevy_folder.to_owned() + "/" + &SRC_FOLDER.to_owned() + "/main.rs")?;
-    bevy_lib_file
-        .write("#![cfg_attr(not(debug_assertions), windows_subsystem = \"windows\")]".as_bytes())?;
+    let _ = bevy_lib_file
+        .write("#![cfg_attr(not(debug_assertions), windows_subsystem = \"windows\")]".as_bytes());
     bevy_lib_file.write_all(model.generate().to_string().as_bytes())?;
 
     let mut cargo_file = File::create(bevy_folder.to_owned() + "/Cargo.toml")?;
-    let buf = format!(r#"[package]
+    let mut buf = format!(
+        r#"[package]
 name = "{meta_name}"
 version = "0.1.0"
 edition = "2021"
@@ -324,23 +327,24 @@ winit = {{ version = "0.25", features=["x11"]}}
 
 [dependencies.bevy]
 version = "0.6"
-"#, meta_name = bevy_folder);
-    let mut buf2 = buf.to_owned();
+"#,
+        meta_name = bevy_folder
+    );
 
     if model.bevy_settings.features.is_empty() {
-        buf2 += "default-features = false";
+        buf += "default-features = false";
     } else {
-        buf2 += "features = [";
+        buf += "features = [";
         let len = model.bevy_settings.features.len();
         for (i, feature) in model.bevy_settings.features.into_iter().enumerate() {
-            buf2 += format!("\"{}\"", feature.to_feature()).as_str();
+            buf += format!("\"{}\"", feature.to_feature()).as_str();
             if i == len {
-                buf2 += ",";
+                buf += ",";
             }
         }
-        buf2 += "]";
+        buf += "]";
     }
 
-    cargo_file.write_all(buf2.as_bytes())?;
+    cargo_file.write_all(buf.as_bytes())?;
     Ok(())
 }
