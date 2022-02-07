@@ -27,20 +27,21 @@ impl BevyModel {
         let mut plugin_app_code: String = "".into();
         for plugin in &self.plugins {
             if plugin.is_group {
-                plugin_app_code += format!(".add_plugins({})", &plugin.name).as_str();
+                plugin_app_code.push_str(format!(".add_plugins({})", &plugin.name).as_str());
             } else {
-                plugin_app_code += format!(".add_plugin({})", &plugin.name).as_str();
+                plugin_app_code.push_str(format!(".add_plugin({})", &plugin.name).as_str());
             }
         }
 
         let mut startup_system_app_code: String = "".into();
         for system in &self.startup_systems {
-            startup_system_app_code += format!(".add_startup_system({})", &system.name).as_str();
+            startup_system_app_code
+                .push_str(format!(".add_startup_system({})", &system.name).as_str());
         }
 
         let mut system_app_code: String = "".into();
         for system in &self.systems {
-            system_app_code += format!(".add_system({})", &system.name).as_str();
+            system_app_code.push_str(format!(".add_system({})", &system.name).as_str());
         }
 
         let mut app_code_merge: String = "".to_owned();
@@ -190,7 +191,7 @@ impl BevyCodegen for Scope {
     }
 
     fn create_component(&mut self, name: &str) -> &mut Struct {
-        self.new_struct(name)
+        self.new_struct(name).derive("Component")
     }
 }
 
@@ -284,6 +285,16 @@ fn build_and_run(model: BevyModel) {
         .current_dir(path)
         .status() //output()
         .expect("failed to execute cargo run");
+
+    /*
+    Open generated project in VSCode
+    println!("code");
+    let _code = Command::new("code")
+        .arg(".")
+        .current_dir(path)
+        .status() //output()
+        .expect("failed to open vscode");
+    */
 }
 
 fn write_to_file(mut model: BevyModel) -> std::io::Result<()> {
@@ -338,7 +349,7 @@ version = "0.6"
         let len = model.bevy_settings.features.len();
         for (i, feature) in model.bevy_settings.features.into_iter().enumerate() {
             buf += format!("\"{}\"", feature.to_feature()).as_str();
-            if i == len {
+            if i != len - 1 {
                 buf += ",";
             }
         }
