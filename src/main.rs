@@ -1,11 +1,12 @@
 extern crate codegen;
+use clap::Parser;
 use codegen::{Function, Scope, Struct};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File},
     io::Write,
     path::Path,
-    process::Command,
+    process::Command, str::FromStr,
 };
 
 #[derive(Serialize, Deserialize, Clone, Default)]
@@ -24,6 +25,9 @@ impl BevyModel {
         let mut scope = Scope::new();
 
         scope.import("bevy::prelude", "*");
+        if self.model_meta.bevy_type.eq(&BevyType::Example){
+            scope.import("bevy_test", "BevyTest");
+        }
 
         let mut plugin_app_code: String = "".into();
         for plugin in &self.plugins {
@@ -51,8 +55,8 @@ impl BevyModel {
         app_code_merge.push_str(&system_app_code);
 
         match &self.model_meta.bevy_type {
-            BevyType::Plugin(s) => scope.create_plugin(s, false, &app_code_merge),
-            BevyType::PluginGroup(s) => scope.create_plugin(s, true, &app_code_merge),
+            BevyType::Plugin(name) => scope.create_plugin(name, false, &app_code_merge),
+            BevyType::PluginGroup(name) => scope.create_plugin(name, true, &app_code_merge),
             _ => scope.create_app(&app_code_merge),
         };
 
@@ -236,28 +240,66 @@ impl BevyCodegen for Scope {
     }
 }
 
-fn main() {
+#[derive(clap::ArgEnum, Clone)]
+enum Template
+{
+    Default,
+    Plugin,
+    Basic2D,
+    Basic3D,
+}
+//Templates
+//Default : empty main/game with wasm support
+//Plugin : basic plugin
+//2D : Very basic 2D game
+//3D : Very basic 3D game
+
+#[derive(clap::ArgEnum, PartialEq, Clone)]
+enum Commands
+{
+    Default,
+    Code,
+    Clean,
+    Release,
+}
+//Commands
+//cmd default - Does the whole process except for the clean, release and code cmd
+//cmd code
+//cmd clean
+//cmd release
+
+impl FromStr for Commands {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().as_str() {
+            "default" => Commands::Default,
+            "code" => Commands::Code,
+            "clean" => Commands::Clean,
+            "release" => Commands::Release,
+            _ => Commands::Default
+        })
+    }
+
+    type Err = std::string::ParseError;
+}
+
+/// Select what bevy project to generate
+#[derive(Parser)]
+struct Cli {
+    #[clap(arg_enum, default_value_t = Template::Default)]
+    template: Template,
+
+    #[clap(multiple_occurrences(true), arg_enum)]
+    commands: Vec<Commands>,
+}
+
+fn create_default_template() -> BevyModel {
     let mut bevy_model = BevyModel {
         model_meta: Meta {
             name: "bevy_test".to_string(),
-            bevy_type: BevyType::Plugin("BevyTest".to_string()),
+            bevy_type: BevyType::App,
         },
-        examples: vec![BevyModel {
-            model_meta: Meta {
-                name: "example_test".to_string(),
-                bevy_type: BevyType::Example,
-            },
-            ..Default::default()
-        }],
         ..Default::default()
     };
-
-    bevy_model.bevy_settings.features.push(Feature::Render);
-
-    bevy_model.plugins.push(Plugin {
-        name: "DefaultPlugins".to_string(),
-        is_group: true,
-    });
 
     bevy_model.components.push(Component {
         name: "Test1".to_string(),
@@ -269,6 +311,56 @@ fn main() {
     };
     bevy_model.startup_systems.push(hw_system);
 
+    bevy_model
+}
+
+fn create_plugin_template() -> BevyModel {
+    let mut bevy_model = BevyModel {
+        model_meta: Meta {
+            name: "bevy_test".to_string(),
+            bevy_type: BevyType::Plugin("BevyTest".to_string()),
+        },
+        examples: vec![BevyModel {
+            model_meta: Meta {
+                name: "example_test".to_string(),
+                bevy_type: BevyType::Example,
+            },
+            plugins: vec![Plugin{ name: "BevyTest".to_string(), is_group: false }],
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    /*bevy_model.bevy_settings.features.push(Feature::Render);
+
+    bevy_model.plugins.push(Plugin {
+        name: "DefaultPlugins".to_string(),
+        is_group: true,
+    });*/
+
+    bevy_model.components.push(Component {
+        name: "Test1".to_string(),
+    });
+
+    let hw_system = System {
+        name: "hello_world".to_string(),
+        content: "println!(\"Hello World From Plugin!\");".to_string(),
+    };
+    bevy_model.startup_systems.push(hw_system);
+
+    bevy_model
+}
+
+fn main() {
+    let args = Cli::parse();
+    
+    let bevy_model = match args.template {
+        Template::Default => create_default_template(),
+        Template::Plugin => create_plugin_template(),
+        Template::Basic2D => todo!(),
+        Template::Basic3D => todo!(),
+    };
+
     let scope = bevy_model.generate();
 
     println!("{}", scope.to_string());
@@ -278,10 +370,24 @@ fn main() {
 
     let _ = write_to_file(bevy_model.clone());
 
-    build_and_run(bevy_model);
+    if args.commands.contains(&Commands::Clean){
+        cmd_clean(bevy_model.clone());
+    }
+    
+    if args.commands.contains(&Commands::Default){
+        cmd_default(bevy_model.clone());
+    }
+    
+    if args.commands.contains(&Commands::Release){
+        cmd_release(bevy_model.clone());
+    }
+
+    if args.commands.contains(&Commands::Code){
+        cmd_code(bevy_model);
+    }
 }
 
-fn build_and_run(model: BevyModel) {
+fn cmd_default(model: BevyModel) {
     let path = model.model_meta.name;
     println!("fmt");
     let _fmt = Command::new("cargo")
@@ -292,14 +398,14 @@ fn build_and_run(model: BevyModel) {
         .expect("failed to execute cargo fmt");
 
     println!("update");
-    let _clippy = Command::new("cargo")
+    let _update = Command::new("cargo")
         .arg("update")
         .current_dir(path.clone())
         .status() //output()
         .expect("failed to execute cargo update");
 
     println!("build");
-    let _clippy = Command::new("cargo")
+    let _build = Command::new("cargo")
         .arg("build")
         .current_dir(path.clone())
         .status() //output()
@@ -335,6 +441,7 @@ fn build_and_run(model: BevyModel) {
 
     println!("example(s)");
     for example in model.examples {
+        println!("Running {}", example.model_meta.name);
         let _run = Command::new("cargo")
             .arg("run")
             .arg("--example")
@@ -343,19 +450,28 @@ fn build_and_run(model: BevyModel) {
             .status() //output()
             .expect("failed to execute cargo run");
     }
+}
 
-    /*
-    Open generated project in VSCode
+fn cmd_code(model: BevyModel) {
+    let path = model.model_meta.name;
+    //Open generated project in VSCode
     println!("code");
     let _code = Command::new("code")
         .arg(".")
         .current_dir(path)
         .status() //output()
         .expect("failed to open vscode");
-    */
 }
 
-fn feature_write(features: Vec<Feature>) -> String {
+fn cmd_clean(model: BevyModel) {
+    println!("clean");
+}
+
+fn cmd_release(model: BevyModel) {
+    println!("release");
+}
+
+fn feature_write(features: &Vec<Feature>) -> String {
     let mut features_str = "".to_owned();
     if features.is_empty() {
         features_str.push_str("default-features = false");
@@ -382,35 +498,12 @@ fn write_to_file(model: BevyModel) -> std::io::Result<()> {
     } else {
         fs::create_dir(bevy_folder.to_owned())?;
     }
-    fs::create_dir(bevy_folder.to_owned() + "/" + &SRC_FOLDER.to_owned())?;
-
-    //Write plugin or main/game
-    let bevy_type_filename = match model.model_meta.bevy_type {
-        BevyType::App => "/main.rs",
-        _ => "/lib.rs",
-    };
-    let mut bevy_lib_file =
-        File::create(bevy_folder.to_owned() + "/" + &SRC_FOLDER.to_owned() + bevy_type_filename)?;
-    let _ = bevy_lib_file
-        .write("#![cfg_attr(not(debug_assertions), windows_subsystem = \"windows\")]".as_bytes());
-    bevy_lib_file.write_all(model.generate().to_string().as_bytes())?;
-
-    //Write examples
-    if !model.examples.is_empty() {
-        fs::create_dir(bevy_folder.to_owned() + "/" + "examples")?;
-        for example in model.examples {
-            let mut bevy_example_file = File::create(
-                bevy_folder.to_owned() + "/examples/" + &example.model_meta.name + ".rs",
-            )?;
-            bevy_example_file.write_all(example.generate().to_string().as_bytes())?;
-        }
-    }
 
     //Write cargo toml
     let mut cargo_file = File::create(bevy_folder.to_owned() + "/Cargo.toml")?;
 
-    let features = feature_write(model.bevy_settings.features);
-    let dev_features = feature_write(model.bevy_settings.dev_features);
+    let features = feature_write(&model.bevy_settings.features);
+    let dev_features = feature_write(&model.bevy_settings.dev_features);
 
     let buf = format!(
         r#"[package]
@@ -449,5 +542,33 @@ version = "0.6"
     );
 
     cargo_file.write_all(buf.as_bytes())?;
+
+
+    fs::create_dir(bevy_folder.to_owned() + "/" + &SRC_FOLDER.to_owned())?;
+
+    //Write plugin or main/game
+    let bevy_type_filename = match model.model_meta.bevy_type {
+        BevyType::App => "/main.rs",
+        _ => "/lib.rs",
+    };
+    let mut bevy_lib_file =
+        File::create(bevy_folder.to_owned() + "/" + &SRC_FOLDER.to_owned() + bevy_type_filename)?;
+    let _ = bevy_lib_file
+        .write("#![cfg_attr(not(debug_assertions), windows_subsystem = \"windows\")]".as_bytes());
+    bevy_lib_file.write_all(model.generate().to_string().as_bytes())?;
+
+    //Write examples
+    fs::remove_dir_all(bevy_folder.to_owned() + "/examples")?;
+    if !model.examples.is_empty() {
+        fs::create_dir(bevy_folder.to_owned() + "/" + "examples")?;
+        for example in model.examples {
+            let mut bevy_example_file = File::create(
+                bevy_folder.to_owned() + "/examples/" + &example.model_meta.name + ".rs",
+            )?;
+            bevy_example_file.write_all(example.generate().to_string().as_bytes())?;
+        }
+    }
+
+    
     Ok(())
 }
