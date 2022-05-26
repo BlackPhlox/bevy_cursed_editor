@@ -1,4 +1,6 @@
 //! A simple 3D scene with light shining over a cube sitting on a plane.
+use std::{thread, process::Command};
+
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_cg_lib::{BevyModel, create_default_template, Meta, BevyType, Feature, write_to_file, cmd_build, cmd_default};
 use bevy_egui::EguiPlugin;
@@ -95,8 +97,8 @@ pub fn create_default_template_v2() -> BevyModel {
 
     let _ = write_to_file(bevy_model.clone());
 
-    cmd_default(bevy_model.clone());
-
+    cmd_default(bevy_model.clone(), true);
+    
     bevy_model
 }
 
