@@ -1,0 +1,14 @@
+[package]
+name = "bevy_cursed_editor"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { version = "1.0.136", features = ["derive"] }
+serde_json = "1.0.78"
+bevy_egui = "0.14.0"
+bevy = "0.7"
+bevy_editor_pls = { git = "https://github.com/jakobhellermann/bevy_editor_pls" }
+bevy_cg_editor = { path = "../bevy_cg_editor"} #{ git = "https://github.com/BlackPhlox/bevy_cg_editor" }
