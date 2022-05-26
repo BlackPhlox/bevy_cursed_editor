@@ -403,18 +403,26 @@ pub fn cmd_build(model: BevyModel){
         .expect("failed to execute cargo clippy");
 }
 
-pub fn cmd_default(model: BevyModel) {
+pub fn cmd_default(model: BevyModel, spawn: bool) {
     cmd_build(model.clone());
     let path = model.model_meta.name;
 
     if let BevyType::App = model.model_meta.bevy_type {
         println!("run");
-        let _run = Command::new("cargo")
+        if spawn {
+            let run = Command::new("cargo")
+            .arg("+nightly")
+            .arg("run")
+            .current_dir(path.clone())
+            .spawn();
+        } else {
+            let run = Command::new("cargo")
             .arg("+nightly")
             .arg("run")
             .current_dir(path.clone())
             .status() //output()
             .expect("failed to execute cargo run");
+        }
     }
 
     println!("example(s)");
