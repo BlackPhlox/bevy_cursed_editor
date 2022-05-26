@@ -1,5 +1,4 @@
 extern crate codegen;
-use clap::Parser;
 use codegen::{Function, Scope, Struct};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -10,7 +9,7 @@ use std::{
 };
 
 #[derive(Serialize, Deserialize, Clone, Default)]
-struct BevyModel {
+pub struct BevyModel {
     plugins: Vec<Plugin>,
     components: Vec<Component>,
     startup_systems: Vec<System>,
@@ -21,7 +20,7 @@ struct BevyModel {
 }
 
 impl BevyModel {
-    fn generate(&self) -> Scope {
+    pub fn generate(&self) -> Scope {
         let mut scope = Scope::new();
 
         scope.import("bevy::prelude", "*");
@@ -120,7 +119,7 @@ struct Settings {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-enum Feature {
+pub enum Feature {
     Default,
     BevyAudio,
     BevyGilrs,
@@ -240,59 +239,8 @@ impl BevyCodegen for Scope {
     }
 }
 
-#[derive(clap::ArgEnum, Clone)]
-enum Template
-{
-    Default,
-    Plugin,
-    Basic2D,
-    Basic3D,
-}
-//Templates
-//Default : empty main/game with wasm support
-//Plugin : basic plugin
-//2D : Very basic 2D game
-//3D : Very basic 3D game
 
-#[derive(clap::ArgEnum, PartialEq, Clone)]
-enum Commands
-{
-    Default,
-    Code,
-    Clean,
-    Release,
-}
-//Commands
-//cmd default - Does the whole process except for the clean, release and code cmd
-//cmd code
-//cmd clean
-//cmd release
-
-impl FromStr for Commands {
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s.to_lowercase().as_str() {
-            "default" => Commands::Default,
-            "code" => Commands::Code,
-            "clean" => Commands::Clean,
-            "release" => Commands::Release,
-            _ => Commands::Default
-        })
-    }
-
-    type Err = std::string::ParseError;
-}
-
-/// Select what bevy project to generate
-#[derive(Parser)]
-struct Cli {
-    #[clap(arg_enum, default_value_t = Template::Default)]
-    template: Template,
-
-    #[clap(multiple_occurrences(true), arg_enum)]
-    commands: Vec<Commands>,
-}
-
-fn create_default_template() -> BevyModel {
+pub fn create_default_template() -> BevyModel {
     let mut bevy_model = BevyModel {
         model_meta: Meta {
             name: "bevy_test".to_string(),
@@ -311,10 +259,12 @@ fn create_default_template() -> BevyModel {
     };
     bevy_model.startup_systems.push(hw_system);
 
+    bevy_model.bevy_settings.features.push(Feature::Dynamic);
+
     bevy_model
 }
 
-fn create_plugin_template() -> BevyModel {
+pub fn create_plugin_template() -> BevyModel {
     let mut bevy_model = BevyModel {
         model_meta: Meta {
             name: "bevy_test".to_string(),
@@ -351,43 +301,7 @@ fn create_plugin_template() -> BevyModel {
     bevy_model
 }
 
-fn main() {
-    let args = Cli::parse();
-    
-    let bevy_model = match args.template {
-        Template::Default => create_default_template(),
-        Template::Plugin => create_plugin_template(),
-        Template::Basic2D => todo!(),
-        Template::Basic3D => todo!(),
-    };
-
-    let scope = bevy_model.generate();
-
-    println!("{}", scope.to_string());
-
-    let serialized = serde_json::to_string(&bevy_model).unwrap();
-    println!("serialized = {}", serialized);
-
-    let _ = write_to_file(bevy_model.clone());
-
-    if args.commands.contains(&Commands::Clean){
-        cmd_clean(bevy_model.clone());
-    }
-    
-    if args.commands.contains(&Commands::Default){
-        cmd_default(bevy_model.clone());
-    }
-    
-    if args.commands.contains(&Commands::Release){
-        cmd_release(bevy_model.clone());
-    }
-
-    if args.commands.contains(&Commands::Code){
-        cmd_code(bevy_model);
-    }
-}
-
-fn cmd_default(model: BevyModel) {
+pub fn cmd_default(model: BevyModel) {
     let path = model.model_meta.name;
     println!("fmt");
     let _fmt = Command::new("cargo")
@@ -399,6 +313,7 @@ fn cmd_default(model: BevyModel) {
 
     println!("update");
     let _update = Command::new("cargo")
+        .arg("+nightly")
         .arg("update")
         .current_dir(path.clone())
         .status() //output()
@@ -406,6 +321,7 @@ fn cmd_default(model: BevyModel) {
 
     println!("build");
     let _build = Command::new("cargo")
+        .arg("+nightly")
         .arg("build")
         .current_dir(path.clone())
         .status() //output()
@@ -413,6 +329,7 @@ fn cmd_default(model: BevyModel) {
 
     println!("fix");
     let _fix = Command::new("cargo")
+        .arg("+nightly")
         .arg("clippy")
         .arg("--fix")
         .arg("--allow-no-vcs")
@@ -422,6 +339,7 @@ fn cmd_default(model: BevyModel) {
 
     println!("clippy");
     let _clippy = Command::new("cargo")
+        .arg("+nightly")
         .arg("clippy")
         .arg("--")
         .arg("-D")
@@ -433,6 +351,7 @@ fn cmd_default(model: BevyModel) {
     if let BevyType::App = model.model_meta.bevy_type {
         println!("run");
         let _run = Command::new("cargo")
+            .arg("+nightly")
             .arg("run")
             .current_dir(path.clone())
             .status() //output()
@@ -443,6 +362,7 @@ fn cmd_default(model: BevyModel) {
     for example in model.examples {
         println!("Running {}", example.model_meta.name);
         let _run = Command::new("cargo")
+            .arg("+nightly")
             .arg("run")
             .arg("--example")
             .arg(example.model_meta.name)
@@ -452,7 +372,7 @@ fn cmd_default(model: BevyModel) {
     }
 }
 
-fn cmd_code(model: BevyModel) {
+pub fn cmd_code(model: BevyModel) {
     let path = model.model_meta.name;
     //Open generated project in VSCode
     println!("code");
@@ -463,15 +383,15 @@ fn cmd_code(model: BevyModel) {
         .expect("failed to open vscode");
 }
 
-fn cmd_clean(model: BevyModel) {
+pub fn cmd_clean(model: BevyModel) {
     println!("clean");
 }
 
-fn cmd_release(model: BevyModel) {
+pub fn cmd_release(model: BevyModel) {
     println!("release");
 }
 
-fn feature_write(features: &Vec<Feature>) -> String {
+pub fn feature_write(features: &Vec<Feature>) -> String {
     let mut features_str = "".to_owned();
     if features.is_empty() {
         features_str.push_str("default-features = false");
@@ -489,12 +409,14 @@ fn feature_write(features: &Vec<Feature>) -> String {
     features_str
 }
 
-fn write_to_file(model: BevyModel) -> std::io::Result<()> {
+pub fn write_to_file(model: BevyModel) -> std::io::Result<()> {
     let bevy_folder = model.model_meta.name.clone();
     const SRC_FOLDER: &str = "src";
+    const CONFIG_FOLDER: &str = ".cargo";
     if Path::new(&bevy_folder).exists() {
         fs::remove_dir_all(bevy_folder.to_owned() + "/" + &SRC_FOLDER.to_owned())?;
-        let _rf = fs::remove_file(bevy_folder.to_owned() + "/" + "Cargo.toml");
+        fs::remove_dir_all(bevy_folder.to_owned() + "/" + &CONFIG_FOLDER.to_owned())?;
+        let _rf = fs::remove_file(bevy_folder.to_owned() + "/Cargo.toml");
     } else {
         fs::create_dir(bevy_folder.to_owned())?;
     }
@@ -525,14 +447,14 @@ lto = "thin"
 codegen-units = 1
 
 [target.'cfg(target_os = "linux")'.dependencies]
-winit = {{ version = "0.25", features=["x11"]}}
+winit = {{ version = "0.26.1", features=["x11"]}}
 
 [dependencies.bevy]
-version = "0.6"
+version = "0.7"
 {features}
 
 [dev-dependencies.bevy]
-version = "0.6"
+version = "0.7"
 {dev_features}
 
 "#,
@@ -543,6 +465,14 @@ version = "0.6"
 
     cargo_file.write_all(buf.as_bytes())?;
 
+    fs::create_dir(bevy_folder.to_owned() + "/" + &CONFIG_FOLDER.to_owned())?;
+
+    let mut cargo_config_file = File::create(bevy_folder.to_owned() + "/" + &CONFIG_FOLDER.to_owned() + "/config.toml")?;
+    let ccf_buf = r#"[target.x86_64-pc-windows-msvc]
+linker = "rust-lld.exe"
+rustflags = ["-Zshare-generics=off"]"#;
+
+    cargo_config_file.write_all(ccf_buf.as_bytes())?;
 
     fs::create_dir(bevy_folder.to_owned() + "/" + &SRC_FOLDER.to_owned())?;
 
