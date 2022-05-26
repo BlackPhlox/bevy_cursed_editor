@@ -78,7 +78,7 @@ fn main() {
     }
     
     if args.commands.contains(&Commands::Default){
-        cmd_default(bevy_model.clone());
+        cmd_default(bevy_model.clone(), false);
     }
     
     if args.commands.contains(&Commands::Release){
