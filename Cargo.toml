@@ -11,4 +11,7 @@ serde_json = "1.0.78"
 bevy_egui = "0.14.0"
 bevy = "0.7"
 bevy_editor_pls = { git = "https://github.com/jakobhellermann/bevy_editor_pls" }
-bevy_cg_editor = { path = "../bevy_cg_editor"} #{ git = "https://github.com/BlackPhlox/bevy_cg_editor" }
+bevy_cg_editor = { git = "https://github.com/BlackPhlox/bevy_cg_editor" }
+
+[patch.crates-io]
+#bevy_cg_editor = { path = "../bevy_cg_editor" } 
