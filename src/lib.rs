@@ -10,13 +10,13 @@ use std::{
 
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct BevyModel {
-    plugins: Vec<Plugin>,
-    components: Vec<Component>,
-    startup_systems: Vec<System>,
-    systems: Vec<System>,
-    bevy_settings: Settings,
-    model_meta: Meta,
-    examples: Vec<BevyModel>,
+    pub plugins: Vec<Plugin>,
+    pub components: Vec<Component>,
+    pub startup_systems: Vec<System>,
+    pub systems: Vec<System>,
+    pub bevy_settings: Settings,
+    pub model_meta: Meta,
+    pub examples: Vec<BevyModel>,
 }
 
 impl BevyModel {
@@ -74,14 +74,14 @@ impl BevyModel {
 }
 
 #[derive(PartialEq, Eq, Serialize, Deserialize, Clone)]
-enum BevyType {
+pub enum BevyType {
     App,
     Plugin(String),
     PluginGroup(String),
     Example,
 }
 #[derive(Serialize, Deserialize, Clone)]
-struct Meta {
+pub struct Meta {
     name: String,
     bevy_type: BevyType,
 }
@@ -96,24 +96,24 @@ impl Default for Meta {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-struct System {
+pub struct System {
     name: String,
     content: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-struct Component {
+pub struct Component {
     name: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-struct Plugin {
+pub struct Plugin {
     name: String,
     is_group: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default)]
-struct Settings {
+pub struct Settings {
     features: Vec<Feature>,
     dev_features: Vec<Feature>,
 }
