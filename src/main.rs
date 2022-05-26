@@ -2,7 +2,7 @@
 use std::{thread, process::Command};
 
 use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_cg_lib::{BevyModel, create_default_template, Meta, BevyType, Feature, write_to_file, cmd_build, cmd_default};
+use bevy_cg_lib::{BevyModel, Meta, BevyType, Feature, write_to_file, cmd_build, cmd_default};
 use bevy_egui::EguiPlugin;
 use bevy_editor_pls::{prelude::*, editor_window::{EditorWindowContext, EditorWindow}, default_windows::hierarchy::HierarchyWindow};
 
@@ -96,8 +96,6 @@ pub fn create_default_template_v2() -> BevyModel {
     println!("{}", scope.to_string());
 
     let _ = write_to_file(bevy_model.clone());
-
-    cmd_default(bevy_model.clone(), true);
     
     bevy_model
 }
@@ -138,8 +136,6 @@ fn setup(
     });
 }
 
-//use bevy_cg_lib::*;
-
 /*
 fn main() {
     let bevy_model = create_default_template();
@@ -175,6 +171,18 @@ impl EditorWindow for CursedOverviewWindow {
                 ui.label("Open Project");
                 ui.label("Save Project");
                 ui.label("Save As Project");
+                if ui.button("Import Json").clicked() {
+                    let mut gm = world.get_resource_mut::<GameModel>().unwrap();
+                    let m = serde_json::from_str::<BevyModel>(cli_clipboard::get_contents().unwrap().as_str());
+                    if let Ok(m) = m {
+                        gm.model = m;
+                    }
+                }
+                if ui.button("Export Json").clicked() {
+                    let gm = world.get_resource_mut::<GameModel>().unwrap();
+                    let m = gm.model.clone();
+                    cli_clipboard::set_contents(serde_json::to_string(&m).unwrap().replace(" ", "")).unwrap();
+                }
                 ui.label("Exit");
             });
 
@@ -182,6 +190,13 @@ impl EditorWindow for CursedOverviewWindow {
                 ui.label("Redo");
                 ui.label("Undo");
                 ui.label("Project Settings");
+            });
+
+            ui.menu_button("Cargo", |ui| {
+                if ui.button("Run").clicked() {
+                    let gm = world.get_resource_mut::<GameModel>().unwrap();
+                    cmd_default(gm.model.clone(), true);
+                }
             });
         });
 
