@@ -5,10 +5,10 @@ use std::{
     fs::{self, File},
     io::Write,
     path::Path,
-    process::Command, str::FromStr,
+    process::Command, str::FromStr, fmt::Display,
 };
 
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct BevyModel {
     pub plugins: Vec<Plugin>,
     pub components: Vec<Component>,
@@ -17,6 +17,53 @@ pub struct BevyModel {
     pub bevy_settings: Settings,
     pub model_meta: Meta,
     pub examples: Vec<BevyModel>,
+}
+
+/*
+impl Display for BevyModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let _ = writeln!(f, "{:?}", &self);
+        Ok(())
+    }
+}
+*/
+
+impl Display for BevyModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let _ = writeln!(f, "BevyModel:");
+
+        let _ = writeln!(f, "   Meta:");
+
+        let _ = writeln!(f, "       {:?}", &self.model_meta);
+
+        let _ = writeln!(f, "   Components:");
+        (&self.components).iter().for_each(|d| {
+            let _ = writeln!(f, "       {}", d.name);
+        });
+
+        let _ = writeln!(f, "");
+
+        let _ = writeln!(f, "   Startup Systems:");
+        (&self.startup_systems).iter().for_each(|d| {
+            let _ = writeln!(f, "       {}", d.name);
+        });
+
+        let _ = writeln!(f, "");
+
+        let _ = writeln!(f, "   Runtime Systems:");
+        (&self.systems).iter().for_each(|d| {
+            let _ = writeln!(f, "       {},", d.name);
+        });
+
+        let _ = writeln!(f, "");
+
+        let _ = writeln!(f, "   Plugins:");
+        (&self.plugins).iter().for_each(|d| {
+            let _ = writeln!(f, "       {:?},", d);
+        });
+        
+        Ok(())
+    }
 }
 
 impl BevyModel {
@@ -64,26 +111,26 @@ impl BevyModel {
         }
 
         for system in &self.startup_systems {
-            scope.create_query(&system.name, &system.content);
+            scope.create_query(&system.name, system.param.clone(), &system.content);
         }
         for system in &self.systems {
-            scope.create_query(&system.name, &system.content);
+            scope.create_query(&system.name, system.param.clone(), &system.content);
         }
         scope
     }
 }
 
-#[derive(PartialEq, Eq, Serialize, Deserialize, Clone)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug)]
 pub enum BevyType {
     App,
     Plugin(String),
     PluginGroup(String),
     Example,
 }
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Meta {
-    name: String,
-    bevy_type: BevyType,
+    pub name: String,
+    pub bevy_type: BevyType,
 }
 
 impl Default for Meta {
@@ -95,30 +142,31 @@ impl Default for Meta {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct System {
-    name: String,
-    content: String,
+    pub name: String,
+    pub param: Vec<(String, String)>,
+    pub content: String,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Component {
-    name: String,
+    pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Plugin {
-    name: String,
-    is_group: bool,
+    pub name: String,
+    pub is_group: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Settings {
-    features: Vec<Feature>,
-    dev_features: Vec<Feature>,
+    pub features: Vec<Feature>,
+    pub dev_features: Vec<Feature>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum Feature {
     Default,
     BevyAudio,
@@ -204,7 +252,7 @@ trait BevyCodegen {
 
     fn create_plugin(&mut self, name: &str, is_group: bool, content: &str) -> &mut Function;
 
-    fn create_query(&mut self, name: &str, content: &str) -> &mut Function;
+    fn create_query(&mut self, name: &str, args: Vec<(String, String)>, content: &str) -> &mut Function;
 
     fn create_component(&mut self, name: &str) -> &mut Struct;
 }
@@ -230,8 +278,12 @@ impl BevyCodegen for Scope {
             .line(";")
     }
 
-    fn create_query(&mut self, name: &str, content: &str) -> &mut Function {
-        self.new_fn(name).line(content)
+    fn create_query(&mut self, name: &str, args: Vec<(String, String)>, content: &str) -> &mut Function {
+        let mut a = self.new_fn(name);
+        for (name, ty) in args {
+            a = a.arg(&name, ty);
+        }
+        a.line(content)
     }
 
     fn create_component(&mut self, name: &str) -> &mut Struct {
@@ -255,6 +307,7 @@ pub fn create_default_template() -> BevyModel {
 
     let hw_system = System {
         name: "hello_world".to_string(),
+        param: Vec::new(),
         content: "println!(\"Hello World!\");".to_string(),
     };
     bevy_model.startup_systems.push(hw_system);
@@ -294,6 +347,7 @@ pub fn create_plugin_template() -> BevyModel {
 
     let hw_system = System {
         name: "hello_world".to_string(),
+        param: Vec::new(),
         content: "println!(\"Hello World From Plugin!\");".to_string(),
     };
     bevy_model.startup_systems.push(hw_system);
@@ -301,7 +355,7 @@ pub fn create_plugin_template() -> BevyModel {
     bevy_model
 }
 
-pub fn cmd_default(model: BevyModel) {
+pub fn cmd_build(model: BevyModel){
     let path = model.model_meta.name;
     println!("fmt");
     let _fmt = Command::new("cargo")
@@ -347,6 +401,11 @@ pub fn cmd_default(model: BevyModel) {
         .current_dir(path.clone())
         .status() //output()
         .expect("failed to execute cargo clippy");
+}
+
+pub fn cmd_default(model: BevyModel) {
+    cmd_build(model.clone());
+    let path = model.model_meta.name;
 
     if let BevyType::App = model.model_meta.bevy_type {
         println!("run");
