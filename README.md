@@ -4,7 +4,7 @@
 🚧 Only for experiential purpose 🚧
 
 ## What is it?
-based on [bevy_cg_editor](https://github.com/BlackPhlox/bevy_cg_editor), `bevy_cursed_editor``is an visual editor for bevy codegen.
+Based on [bevy_cg_editor](https://github.com/BlackPhlox/bevy_cg_editor), `bevy_cursed_editor` is an visual editor for bevy codegen.
 
 ## Usage
 Instructions WIP
