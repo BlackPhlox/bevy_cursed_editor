@@ -1,10 +1,14 @@
 //! A simple 3D scene with light shining over a cube sitting on a plane.
-use std::{thread, process::Command};
 
-use bevy::{prelude::*, diagnostic::FrameTimeDiagnosticsPlugin};
-use bevy_cg_lib::{BevyModel, Meta, BevyType, Feature, write_to_file, cmd_build, cmd_default};
+use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
+use bevy_cg_lib::{
+    cmd_default, write_to_file, BevyModel, BevyType, Feature, Meta, PluginDependency,
+};
+use bevy_editor_pls::{
+    editor_window::{EditorWindow, EditorWindowContext},
+    prelude::*,
+};
 use bevy_egui::EguiPlugin;
-use bevy_editor_pls::{prelude::*, editor_window::{EditorWindowContext, EditorWindow}, default_windows::hierarchy::HierarchyWindow};
 
 fn main() {
     App::new()
@@ -23,12 +27,14 @@ fn main() {
 }
 
 pub struct GameModel {
-    model: BevyModel
+    model: BevyModel,
 }
 
-impl Default for GameModel{
+impl Default for GameModel {
     fn default() -> Self {
-        Self { model: create_default_template_v2() }
+        Self {
+            model: create_default_template_v2(),
+        }
     }
 }
 
@@ -45,17 +51,31 @@ pub fn create_default_template_v2() -> BevyModel {
         name: "Test1".to_string(),
     });
 
-    bevy_model.plugins.push(bevy_cg_lib::Plugin{
+    bevy_model.plugins.push(bevy_cg_lib::Plugin {
         name: "DefaultPlugins".to_string(),
         is_group: true,
+        dependencies: vec![],
+    });
+
+    bevy_model.plugins.push(bevy_cg_lib::Plugin {
+        name: "ConfigCam".to_string(),
+        is_group: false,
+        dependencies: vec![PluginDependency {
+            crate_name: "bevy_config_cam".into(),
+            crate_version: "0.3.0".into(),
+            crate_paths: vec!["*".into()],
+        }],
     });
 
     let hw_system = bevy_cg_lib::System {
         name: "setup".to_string(),
         param: vec![
-            ("mut commands".to_string(),"Commands".to_string()),
-            ("mut meshes".to_string(),"ResMut<Assets<Mesh>>".to_string()),
-            ("mut materials".to_string(),"ResMut<Assets<StandardMaterial>>".to_string()),
+            ("mut commands".to_string(), "Commands".to_string()),
+            ("mut meshes".to_string(), "ResMut<Assets<Mesh>>".to_string()),
+            (
+                "mut materials".to_string(),
+                "ResMut<Assets<StandardMaterial>>".to_string(),
+            ),
         ],
         content: r#"
         // plane
@@ -85,18 +105,19 @@ pub fn create_default_template_v2() -> BevyModel {
         commands.spawn_bundle(PerspectiveCameraBundle {
             transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
             ..default()
-        });"#.to_string(),
+        });"#
+            .to_string(),
     };
     bevy_model.startup_systems.push(hw_system);
 
     bevy_model.bevy_settings.features.push(Feature::Dynamic);
 
     let scope = bevy_model.generate();
-    
+
     println!("{}", scope.to_string());
 
     let _ = write_to_file(bevy_model.clone());
-    
+
     bevy_model
 }
 
@@ -140,9 +161,9 @@ fn setup(
 fn main() {
     let bevy_model = create_default_template();
     //let bevy_model =create_plugin_template();
-    
+
     let scope = bevy_model.generate();
-    
+
     println!("{}", scope.to_string());
 
     let serialized = serde_json::to_string(&bevy_model).unwrap();
@@ -162,7 +183,7 @@ impl EditorWindow for CursedOverviewWindow {
     type State = ();
     const NAME: &'static str = "Cursed Overview";
 
-    fn ui(world: &mut World, cx: EditorWindowContext, ui: &mut bevy_editor_pls::egui::Ui) {
+    fn ui(world: &mut World, _cx: EditorWindowContext, ui: &mut bevy_editor_pls::egui::Ui) {
         //let currently_inspected = cx.state::<HierarchyWindow>().unwrap().selected;
 
         ui.horizontal(|ui| {
@@ -173,7 +194,9 @@ impl EditorWindow for CursedOverviewWindow {
                 ui.label("Save As Project");
                 if ui.button("Import Json").clicked() {
                     let mut gm = world.get_resource_mut::<GameModel>().unwrap();
-                    let m = serde_json::from_str::<BevyModel>(cli_clipboard::get_contents().unwrap().as_str());
+                    let m = serde_json::from_str::<BevyModel>(
+                        cli_clipboard::get_contents().unwrap().as_str(),
+                    );
                     if let Ok(m) = m {
                         gm.model = m;
                     }
@@ -181,7 +204,10 @@ impl EditorWindow for CursedOverviewWindow {
                 if ui.button("Export Json").clicked() {
                     let gm = world.get_resource_mut::<GameModel>().unwrap();
                     let m = gm.model.clone();
-                    cli_clipboard::set_contents(serde_json::to_string(&m).unwrap().replace(" ", "")).unwrap();
+                    cli_clipboard::set_contents(
+                        serde_json::to_string(&m).unwrap().replace(" ", ""),
+                    )
+                    .unwrap();
                 }
                 ui.label("Exit");
             });
@@ -200,7 +226,7 @@ impl EditorWindow for CursedOverviewWindow {
             });
         });
 
-        let mut gm = world.get_resource_mut::<GameModel>().unwrap();
+        let gm = world.get_resource_mut::<GameModel>().unwrap();
         let m = gm.model.clone();
         ui.label(m.to_string());
     }
@@ -211,14 +237,14 @@ impl EditorWindow for CursedEntitiesWindow {
     type State = ();
     const NAME: &'static str = "Cursed Entities";
 
-    fn ui(world: &mut World, cx: EditorWindowContext, ui: &mut bevy_editor_pls::egui::Ui) {
+    fn ui(world: &mut World, _cx: EditorWindowContext, ui: &mut bevy_editor_pls::egui::Ui) {
         //let currently_inspected = cx.state::<HierarchyWindow>().unwrap().selected;
 
         ui.label("Cursed Entities Overview");
 
         ui.menu_button("Entity", |ui| {
             ui.menu_button("Spawn using existing system", |ui| {
-                let mut gm = world.get_resource_mut::<GameModel>().unwrap();
+                let gm = world.get_resource_mut::<GameModel>().unwrap();
                 let m = gm.model.clone();
 
                 ui.label("Startup Systems:");
@@ -252,8 +278,6 @@ impl EditorWindow for CursedEntitiesWindow {
                     println!("Add Bundle to new runtime startup");
                 }
             });
-            
-            
         });
     }
 }
@@ -263,7 +287,7 @@ impl EditorWindow for CursedComponentsWindow {
     type State = ();
     const NAME: &'static str = "Cursed Components";
 
-    fn ui(world: &mut World, cx: EditorWindowContext, ui: &mut bevy_editor_pls::egui::Ui) {
+    fn ui(world: &mut World, _cx: EditorWindowContext, ui: &mut bevy_editor_pls::egui::Ui) {
         //let currently_inspected = cx.state::<HierarchyWindow>().unwrap().selected;
 
         ui.label("Cursed Components Overview");
@@ -275,10 +299,10 @@ impl EditorWindow for CursedComponentsWindow {
                 println!("Add component to entity");
             }
         });
-        let mut a : bool = true;
+        let mut a: bool = true;
         ui.checkbox(&mut a, "Show project components only");
         ui.checkbox(&mut a, "Show used components only");
-        let mut gm = world.get_resource_mut::<GameModel>().unwrap();
+        let gm = world.get_resource_mut::<GameModel>().unwrap();
         let m = gm.model.clone();
         m.components.iter().for_each(|s| {
             ui.label(s.name.as_str());
@@ -291,7 +315,7 @@ impl EditorWindow for CursedSystemsWindow {
     type State = ();
     const NAME: &'static str = "Cursed Systems";
 
-    fn ui(world: &mut World, cx: EditorWindowContext, ui: &mut bevy_editor_pls::egui::Ui) {
+    fn ui(world: &mut World, _cx: EditorWindowContext, ui: &mut bevy_editor_pls::egui::Ui) {
         //let currently_inspected = cx.state::<HierarchyWindow>().unwrap().selected;
 
         ui.label("Cursed Systems Overview");
@@ -303,7 +327,7 @@ impl EditorWindow for CursedSystemsWindow {
                 println!("Add system");
             }
         });
-        let mut gm = world.get_resource_mut::<GameModel>().unwrap();
+        let gm = world.get_resource_mut::<GameModel>().unwrap();
         let m = gm.model.clone();
         m.startup_systems.iter().for_each(|s| {
             ui.label(s.name.as_str());
