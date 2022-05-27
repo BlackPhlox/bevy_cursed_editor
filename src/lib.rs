@@ -361,7 +361,7 @@ pub fn create_plugin_template() -> BevyModel {
     bevy_model
 }
 
-pub fn cmd_build(model: BevyModel){
+pub fn cmd_fmt(model: BevyModel){
     let path = model.model_meta.name;
     println!("fmt");
     let _fmt = Command::new("cargo")
@@ -370,6 +370,11 @@ pub fn cmd_build(model: BevyModel){
         .current_dir(path.clone())
         .status() //output()
         .expect("failed to execute cargo fmt");
+}
+
+pub fn cmd_build(model: BevyModel){
+    cmd_fmt(model.clone());
+    let path = model.model_meta.name;
 
     println!("update");
     let _update = Command::new("cargo")
