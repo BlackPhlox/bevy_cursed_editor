@@ -593,8 +593,9 @@ rustflags = ["-Zshare-generics=off"]"#;
     let _ = bevy_lib_file
         .write((import_deps + "\n").as_bytes());
 
-    let _ = bevy_lib_file
-        .write(("#[bevy_main]\n").as_bytes());
+    if model.meta.bevy_type.eq(&BevyType::App){
+        let _ = bevy_lib_file.write(("#[bevy_main]\n").as_bytes());
+    }
 
     bevy_lib_file.write_all(model.generate().to_string().as_bytes())?;
 
