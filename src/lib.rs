@@ -15,7 +15,7 @@ pub struct BevyModel {
     pub startup_systems: Vec<System>,
     pub systems: Vec<System>,
     pub bevy_settings: Settings,
-    pub model_meta: Meta,
+    pub meta: Meta,
     pub examples: Vec<BevyModel>,
 }
 
@@ -34,7 +34,7 @@ impl Display for BevyModel {
 
         let _ = writeln!(f, "   Meta:");
 
-        let _ = writeln!(f, "       {:?}", &self.model_meta);
+        let _ = writeln!(f, "       {:?}", &self.meta);
 
         let _ = writeln!(f, "   Components:");
         (&self.components).iter().for_each(|d| {
@@ -70,7 +70,7 @@ impl BevyModel {
     pub fn generate(&self) -> Scope {
         let mut scope = Scope::new();
 
-        if self.model_meta.bevy_type.eq(&BevyType::Example){
+        if self.meta.bevy_type.eq(&BevyType::Example){
             scope.import("bevy_test", "BevyTest");
         }
 
@@ -99,7 +99,7 @@ impl BevyModel {
         app_code_merge.push_str(&startup_system_app_code);
         app_code_merge.push_str(&system_app_code);
 
-        match &self.model_meta.bevy_type {
+        match &self.meta.bevy_type {
             BevyType::Plugin(name) => scope.create_plugin(name, false, &app_code_merge),
             BevyType::PluginGroup(name) => scope.create_plugin(name, true, &app_code_merge),
             _ => scope.create_app(&app_code_merge),
@@ -300,7 +300,7 @@ impl BevyCodegen for Scope {
 
 pub fn create_default_template() -> BevyModel {
     let mut bevy_model = BevyModel {
-        model_meta: Meta {
+        meta: Meta {
             name: "bevy_test".to_string(),
             bevy_type: BevyType::App,
         },
@@ -325,12 +325,12 @@ pub fn create_default_template() -> BevyModel {
 
 pub fn create_plugin_template() -> BevyModel {
     let mut bevy_model = BevyModel {
-        model_meta: Meta {
+        meta: Meta {
             name: "bevy_test".to_string(),
             bevy_type: BevyType::Plugin("BevyTest".to_string()),
         },
         examples: vec![BevyModel {
-            model_meta: Meta {
+            meta: Meta {
                 name: "example_test".to_string(),
                 bevy_type: BevyType::Example,
             },
@@ -362,7 +362,7 @@ pub fn create_plugin_template() -> BevyModel {
 }
 
 pub fn cmd_fmt(model: BevyModel){
-    let path = model.model_meta.name;
+    let path = model.meta.name;
     println!("fmt");
     let _fmt = Command::new("cargo")
         .arg("fmt")
@@ -374,7 +374,7 @@ pub fn cmd_fmt(model: BevyModel){
 
 pub fn cmd_build(model: BevyModel){
     cmd_fmt(model.clone());
-    let path = model.model_meta.name;
+    let path = model.meta.name;
 
     println!("update");
     let _update = Command::new("cargo")
@@ -416,9 +416,9 @@ pub fn cmd_build(model: BevyModel){
 
 pub fn cmd_default(model: BevyModel, spawn: bool) {
     cmd_build(model.clone());
-    let path = model.model_meta.name;
+    let path = model.meta.name;
 
-    if let BevyType::App = model.model_meta.bevy_type {
+    if let BevyType::App = model.meta.bevy_type {
         println!("run");
         if spawn {
             let run = Command::new("cargo")
@@ -438,12 +438,12 @@ pub fn cmd_default(model: BevyModel, spawn: bool) {
 
     println!("example(s)");
     for example in model.examples {
-        println!("Running {}", example.model_meta.name);
+        println!("Running {}", example.meta.name);
         let _run = Command::new("cargo")
             .arg("+nightly")
             .arg("run")
             .arg("--example")
-            .arg(example.model_meta.name)
+            .arg(example.meta.name)
             .current_dir(path.clone())
             .status() //output()
             .expect("failed to execute cargo run");
@@ -451,7 +451,7 @@ pub fn cmd_default(model: BevyModel, spawn: bool) {
 }
 
 pub fn cmd_code(model: BevyModel) {
-    let path = model.model_meta.name;
+    let path = model.meta.name;
     //Open generated project in VSCode
     println!("code");
     let _code = Command::new("code")
@@ -488,7 +488,7 @@ pub fn feature_write(features: &Vec<Feature>) -> String {
 }
 
 pub fn write_to_file(model: BevyModel) -> std::io::Result<()> {
-    let bevy_folder = model.model_meta.name.clone();
+    let bevy_folder = model.meta.name.clone();
     const SRC_FOLDER: &str = "src";
     const CONFIG_FOLDER: &str = ".cargo";
     if Path::new(&bevy_folder).exists() {
@@ -570,7 +570,7 @@ rustflags = ["-Zshare-generics=off"]"#;
     fs::create_dir(bevy_folder.to_owned() + "/" + &SRC_FOLDER.to_owned())?;
 
     //Write plugin or main/game
-    let bevy_type_filename = match model.model_meta.bevy_type {
+    let bevy_type_filename = match model.meta.bevy_type {
         BevyType::App => "/main.rs",
         _ => "/lib.rs",
     };
@@ -604,7 +604,7 @@ rustflags = ["-Zshare-generics=off"]"#;
         fs::create_dir(bevy_folder.to_owned() + "/" + "examples")?;
         for example in model.examples {
             let mut bevy_example_file = File::create(
-                bevy_folder.to_owned() + "/examples/" + &example.model_meta.name + ".rs",
+                bevy_folder.to_owned() + "/examples/" + &example.meta.name + ".rs",
             )?;
             bevy_example_file.write_all(example.generate().to_string().as_bytes())?;
         }
