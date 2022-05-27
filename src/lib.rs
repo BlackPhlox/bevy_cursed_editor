@@ -70,7 +70,6 @@ impl BevyModel {
     pub fn generate(&self) -> Scope {
         let mut scope = Scope::new();
 
-        scope.import("bevy::prelude", "*");
         if self.model_meta.bevy_type.eq(&BevyType::Example){
             scope.import("bevy_test", "BevyTest");
         }
@@ -158,6 +157,14 @@ pub struct Component {
 pub struct Plugin {
     pub name: String,
     pub is_group: bool,
+    pub dependencies: Vec<PluginDependency>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
+pub struct PluginDependency {
+    pub crate_name: String,
+    pub crate_version: String,
+    pub crate_paths: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
@@ -258,8 +265,7 @@ trait BevyCodegen {
 }
 impl BevyCodegen for Scope {
     fn create_app(&mut self, content: &str) -> &mut Function {
-        self.raw("#[bevy_main]")
-            .new_fn("main")
+        self.new_fn("main")
             .line(format!("App::new(){}.run();", content))
     }
 
@@ -328,7 +334,7 @@ pub fn create_plugin_template() -> BevyModel {
                 name: "example_test".to_string(),
                 bevy_type: BevyType::Example,
             },
-            plugins: vec![Plugin{ name: "BevyTest".to_string(), is_group: false }],
+            plugins: vec![Plugin{ name: "BevyTest".to_string(), is_group: false, dependencies: vec![] }],
             ..Default::default()
         }],
         ..Default::default()
@@ -494,6 +500,19 @@ pub fn write_to_file(model: BevyModel) -> std::io::Result<()> {
     let features = feature_write(&model.bevy_settings.features);
     let dev_features = feature_write(&model.bevy_settings.dev_features);
 
+    let crate_deps = model.plugins.iter().map(|d| {
+        let mut s = "".to_owned();
+        for b in d.dependencies.iter(){
+            let k = if b.crate_version.starts_with("{") {
+                format!("{} = {}\n", b.crate_name, b.crate_version)
+            } else {
+                format!("{} = \"{}\"\n", b.crate_name, b.crate_version)
+            };
+            s.push_str(&k);
+        }
+        s.to_string()
+    }).collect::<Vec<String>>().join("");
+
     let buf = format!(
         r#"[package]
 name = "{meta_name}"
@@ -516,6 +535,8 @@ codegen-units = 1
 [target.'cfg(target_os = "linux")'.dependencies]
 winit = {{ version = "0.26.1", features=["x11"]}}
 
+[dependencies]
+{crate_deps}
 [dependencies.bevy]
 version = "0.7"
 {features}
@@ -550,8 +571,26 @@ rustflags = ["-Zshare-generics=off"]"#;
     };
     let mut bevy_lib_file =
         File::create(bevy_folder.to_owned() + "/" + &SRC_FOLDER.to_owned() + bevy_type_filename)?;
+
+    let import_deps = model.plugins.iter().map(|d| {
+        let mut s = "".to_owned();
+        for b in d.dependencies.iter(){
+            for c in b.crate_paths.iter(){
+                s.push_str(&format!("use {}::{};\n", b.crate_name,c));
+            }
+        }
+        s.to_string()
+    }).collect::<Vec<String>>().join("");
+
     let _ = bevy_lib_file
-        .write("#![cfg_attr(not(debug_assertions), windows_subsystem = \"windows\")]".as_bytes());
+        .write("#![cfg_attr(not(debug_assertions), windows_subsystem = \"windows\")]\nuse bevy::prelude::*;\n".as_bytes());
+
+    let _ = bevy_lib_file
+        .write((import_deps + "\n").as_bytes());
+
+    let _ = bevy_lib_file
+        .write(("#[bevy_main]\n").as_bytes());
+
     bevy_lib_file.write_all(model.generate().to_string().as_bytes())?;
 
     //Write examples
