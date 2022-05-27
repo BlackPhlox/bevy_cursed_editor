@@ -2,7 +2,7 @@
 
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
 use bevy_cg_lib::{
-    cmd_default, write_to_file, BevyModel, BevyType, Feature, Meta, PluginDependency,
+    cmd_default, write_to_file, BevyModel, BevyType, Feature, Meta, PluginDependency, cmd_fmt,
 };
 use bevy_editor_pls::{
     editor_window::{EditorWindow, EditorWindowContext},
@@ -198,6 +198,7 @@ impl EditorWindow for CursedOverviewWindow {
                         cli_clipboard::get_contents().unwrap().as_str(),
                     );
                     if let Ok(m) = m {
+                        let _ = write_to_file(m.clone());
                         gm.model = m;
                     }
                 }
@@ -205,7 +206,7 @@ impl EditorWindow for CursedOverviewWindow {
                     let gm = world.get_resource_mut::<GameModel>().unwrap();
                     let m = gm.model.clone();
                     cli_clipboard::set_contents(
-                        serde_json::to_string(&m).unwrap().replace(" ", ""),
+                        serde_json::to_string(&m).unwrap().replace("  ", ""),
                     )
                     .unwrap();
                 }
@@ -219,6 +220,10 @@ impl EditorWindow for CursedOverviewWindow {
             });
 
             ui.menu_button("Cargo", |ui| {
+                if ui.button("Fmt").clicked() {
+                    let gm = world.get_resource_mut::<GameModel>().unwrap();
+                    cmd_fmt(gm.model.clone());
+                }
                 if ui.button("Run").clicked() {
                     let gm = world.get_resource_mut::<GameModel>().unwrap();
                     cmd_default(gm.model.clone(), true);
