@@ -40,7 +40,7 @@ impl Default for GameModel {
 
 pub fn create_default_template_v2() -> BevyModel {
     let mut bevy_model = BevyModel {
-        model_meta: Meta {
+        meta: Meta {
             name: "bevy_test".to_string(),
             bevy_type: BevyType::App,
         },
