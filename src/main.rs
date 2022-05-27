@@ -2,7 +2,7 @@
 
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
 use bevy_cg_lib::{
-    cmd_default, write_to_file, BevyModel, BevyType, Feature, Meta, PluginDependency, cmd_fmt,
+    cmd_default, write_to_file, BevyModel, BevyType, Feature, Meta, PluginDependency, cmd_fmt, create_plugin_template, create_default_template,
 };
 use bevy_editor_pls::{
     editor_window::{EditorWindow, EditorWindowContext},
@@ -188,7 +188,18 @@ impl EditorWindow for CursedOverviewWindow {
 
         ui.horizontal(|ui| {
             ui.menu_button("File", |ui| {
-                ui.label("New Project");
+                ui.menu_button("New Project", |ui| {
+                    if ui.button("Template App").clicked() {
+                        let mut gm = world.get_resource_mut::<GameModel>().unwrap();
+                        gm.model = create_default_template();
+                        let _ = write_to_file(gm.model.clone());
+                    }
+                    if ui.button("Template Plugin").clicked() {
+                        let mut gm = world.get_resource_mut::<GameModel>().unwrap();
+                        gm.model = create_plugin_template();
+                        let _ = write_to_file(gm.model.clone());
+                    }
+                });
                 ui.label("Open Project");
                 ui.label("Save Project");
                 ui.label("Save As Project");
@@ -216,6 +227,7 @@ impl EditorWindow for CursedOverviewWindow {
             ui.menu_button("Edit", |ui| {
                 ui.label("Redo");
                 ui.label("Undo");
+                ui.label("History");
                 ui.label("Project Settings");
             });
 
