@@ -2,7 +2,8 @@
 
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
 use bevy_cg_lib::{
-    cmd_default, write_to_file, BevyModel, BevyType, Feature, Meta, PluginDependency, cmd_fmt, create_plugin_template, create_default_template,
+    cmd_default, cmd_fmt, create_default_template, create_plugin_template, write_to_file,
+    BevyModel, BevyType, Feature, Meta, PluginDependency,
 };
 use bevy_editor_pls::{
     editor_window::{EditorWindow, EditorWindowContext},
@@ -210,6 +211,7 @@ impl EditorWindow for CursedOverviewWindow {
                     );
                     if let Ok(m) = m {
                         let _ = write_to_file(m.clone());
+                        cmd_fmt(m.clone());
                         gm.model = m;
                     }
                 }
