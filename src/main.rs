@@ -10,6 +10,7 @@ use bevy_editor_pls::{
     prelude::*,
 };
 use bevy_egui::EguiPlugin;
+use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGridMaterial, InfiniteGridPlugin};
 
 fn main() {
     App::new()
@@ -18,6 +19,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(EditorPlugin)
         .add_plugin(EguiPlugin)
+        .add_plugin(InfiniteGridPlugin)
         .add_editor_window::<CursedOverviewWindow>()
         .add_editor_window::<CursedEntitiesWindow>()
         .add_editor_window::<CursedComponentsWindow>()
@@ -127,6 +129,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut grid_materials: ResMut<Assets<InfiniteGridMaterial>>,
 ) {
     // plane
     commands.spawn_bundle(PbrBundle {
@@ -156,6 +159,10 @@ fn setup(
         transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     });
+
+    commands.spawn_bundle(InfiniteGridBundle::new(
+        grid_materials.add(InfiniteGridMaterial::default()),
+    ));
 }
 
 /*

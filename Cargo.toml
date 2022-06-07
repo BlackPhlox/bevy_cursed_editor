@@ -13,4 +13,5 @@ bevy = "0.7"
 cli-clipboard = "0.2.1"
 bevy_editor_pls = { git = "https://github.com/jakobhellermann/bevy_editor_pls" }
 bevy_cg_editor = { git = "https://github.com/BlackPhlox/bevy_cg_editor" }
+bevy_infinite_grid = { git = "https://github.com/ForesightMiningSoftwareCorporation/bevy_infinite_grid", branch = "main" }
 #bevy_cg_editor = { path = "../bevy_cg_editor" } 
