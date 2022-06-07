@@ -2,10 +2,11 @@ extern crate codegen;
 use codegen::{Function, Scope, Struct};
 use serde::{Deserialize, Serialize};
 use std::{
+    fmt::Display,
     fs::{self, File},
     io::Write,
     path::Path,
-    process::Command, str::FromStr, fmt::Display,
+    process::Command,
 };
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
@@ -41,27 +42,27 @@ impl Display for BevyModel {
             let _ = writeln!(f, "       {}", d.name);
         });
 
-        let _ = writeln!(f, "");
+        let _ = writeln!(f);
 
         let _ = writeln!(f, "   Startup Systems:");
         (&self.startup_systems).iter().for_each(|d| {
             let _ = writeln!(f, "       {}", d.name);
         });
 
-        let _ = writeln!(f, "");
+        let _ = writeln!(f);
 
         let _ = writeln!(f, "   Runtime Systems:");
         (&self.systems).iter().for_each(|d| {
             let _ = writeln!(f, "       {},", d.name);
         });
 
-        let _ = writeln!(f, "");
+        let _ = writeln!(f);
 
         let _ = writeln!(f, "   Plugins:");
         (&self.plugins).iter().for_each(|d| {
             let _ = writeln!(f, "       {:?},", d);
         });
-        
+
         Ok(())
     }
 }
@@ -70,7 +71,7 @@ impl BevyModel {
     pub fn generate(&self) -> Scope {
         let mut scope = Scope::new();
 
-        if self.meta.bevy_type.eq(&BevyType::Example){
+        if self.meta.bevy_type.eq(&BevyType::Example) {
             scope.import("bevy_test", "BevyTest");
         }
 
@@ -259,7 +260,12 @@ trait BevyCodegen {
 
     fn create_plugin(&mut self, name: &str, is_group: bool, content: &str) -> &mut Function;
 
-    fn create_query(&mut self, name: &str, args: Vec<(String, String)>, content: &str) -> &mut Function;
+    fn create_query(
+        &mut self,
+        name: &str,
+        args: Vec<(String, String)>,
+        content: &str,
+    ) -> &mut Function;
 
     fn create_component(&mut self, name: &str) -> &mut Struct;
 }
@@ -284,7 +290,12 @@ impl BevyCodegen for Scope {
             .line(";")
     }
 
-    fn create_query(&mut self, name: &str, args: Vec<(String, String)>, content: &str) -> &mut Function {
+    fn create_query(
+        &mut self,
+        name: &str,
+        args: Vec<(String, String)>,
+        content: &str,
+    ) -> &mut Function {
         let mut a = self.new_fn(name);
         for (name, ty) in args {
             a = a.arg(&name, ty);
@@ -296,7 +307,6 @@ impl BevyCodegen for Scope {
         self.new_struct(name).derive("Component")
     }
 }
-
 
 pub fn create_default_template() -> BevyModel {
     let mut bevy_model = BevyModel {
@@ -334,7 +344,11 @@ pub fn create_plugin_template() -> BevyModel {
                 name: "example_test".to_string(),
                 bevy_type: BevyType::Example,
             },
-            plugins: vec![Plugin{ name: "BevyTest".to_string(), is_group: false, dependencies: vec![] }],
+            plugins: vec![Plugin {
+                name: "BevyTest".to_string(),
+                is_group: false,
+                dependencies: vec![],
+            }],
             ..Default::default()
         }],
         ..Default::default()
@@ -361,18 +375,18 @@ pub fn create_plugin_template() -> BevyModel {
     bevy_model
 }
 
-pub fn cmd_fmt(model: BevyModel){
+pub fn cmd_fmt(model: BevyModel) {
     let path = model.meta.name;
     println!("fmt");
     let _fmt = Command::new("cargo")
         .arg("fmt")
         .arg("--all")
-        .current_dir(path.clone())
+        .current_dir(path)
         .status() //output()
         .expect("failed to execute cargo fmt");
 }
 
-pub fn cmd_build(model: BevyModel){
+pub fn cmd_build(model: BevyModel) {
     cmd_fmt(model.clone());
     let path = model.meta.name;
 
@@ -409,7 +423,7 @@ pub fn cmd_build(model: BevyModel){
         .arg("--")
         .arg("-D")
         .arg("warnings")
-        .current_dir(path.clone())
+        .current_dir(path)
         .status() //output()
         .expect("failed to execute cargo clippy");
 }
@@ -421,18 +435,18 @@ pub fn cmd_default(model: BevyModel, spawn: bool) {
     if let BevyType::App = model.meta.bevy_type {
         println!("run");
         if spawn {
-            let run = Command::new("cargo")
-            .arg("+nightly")
-            .arg("run")
-            .current_dir(path.clone())
-            .spawn();
+            let _run = Command::new("cargo")
+                .arg("+nightly")
+                .arg("run")
+                .current_dir(path.clone())
+                .spawn();
         } else {
-            let run = Command::new("cargo")
-            .arg("+nightly")
-            .arg("run")
-            .current_dir(path.clone())
-            .status() //output()
-            .expect("failed to execute cargo run");
+            let _run = Command::new("cargo")
+                .arg("+nightly")
+                .arg("run")
+                .current_dir(path.clone())
+                .status() //output()
+                .expect("failed to execute cargo run");
         }
     }
 
@@ -461,11 +475,11 @@ pub fn cmd_code(model: BevyModel) {
         .expect("failed to open vscode");
 }
 
-pub fn cmd_clean(model: BevyModel) {
+pub fn cmd_clean(_model: BevyModel) {
     println!("clean");
 }
 
-pub fn cmd_release(model: BevyModel) {
+pub fn cmd_release(_model: BevyModel) {
     println!("release");
 }
 
@@ -476,7 +490,7 @@ pub fn feature_write(features: &Vec<Feature>) -> String {
     } else {
         features_str += "features = [";
         let len = features.len();
-        for (i, feature) in features.into_iter().enumerate() {
+        for (i, feature) in features.iter().enumerate() {
             features_str += format!("\"{}\"", feature.to_feature()).as_str();
             if i != len - 1 {
                 features_str += ",";
@@ -492,11 +506,11 @@ pub fn write_to_file(model: BevyModel) -> std::io::Result<()> {
     const SRC_FOLDER: &str = "src";
     const CONFIG_FOLDER: &str = ".cargo";
     if Path::new(&bevy_folder).exists() {
-        fs::remove_dir_all(bevy_folder.to_owned() + "/" + &SRC_FOLDER.to_owned())?;
-        fs::remove_dir_all(bevy_folder.to_owned() + "/" + &CONFIG_FOLDER.to_owned())?;
+        fs::remove_dir_all(bevy_folder.to_owned() + "/" + SRC_FOLDER)?;
+        fs::remove_dir_all(bevy_folder.to_owned() + "/" + CONFIG_FOLDER)?;
         let _rf = fs::remove_file(bevy_folder.to_owned() + "/Cargo.toml");
     } else {
-        fs::create_dir(bevy_folder.to_owned())?;
+        fs::create_dir(&bevy_folder)?;
     }
 
     //Write cargo toml
@@ -505,18 +519,23 @@ pub fn write_to_file(model: BevyModel) -> std::io::Result<()> {
     let features = feature_write(&model.bevy_settings.features);
     let dev_features = feature_write(&model.bevy_settings.dev_features);
 
-    let crate_deps = model.plugins.iter().map(|d| {
-        let mut s = "".to_owned();
-        for b in d.dependencies.iter(){
-            let k = if b.crate_version.starts_with("{") {
-                format!("{} = {}\n", b.crate_name, b.crate_version)
-            } else {
-                format!("{} = \"{}\"\n", b.crate_name, b.crate_version)
-            };
-            s.push_str(&k);
-        }
-        s.to_string()
-    }).collect::<Vec<String>>().join("");
+    let crate_deps = model
+        .plugins
+        .iter()
+        .map(|d| {
+            let mut s = "".to_owned();
+            for b in d.dependencies.iter() {
+                let k = if b.crate_version.starts_with('{') {
+                    format!("{} = {}\n", b.crate_name, b.crate_version)
+                } else {
+                    format!("{} = \"{}\"\n", b.crate_name, b.crate_version)
+                };
+                s.push_str(&k);
+            }
+            s.to_string()
+        })
+        .collect::<Vec<String>>()
+        .join("");
 
     let buf = format!(
         r#"[package]
@@ -558,16 +577,17 @@ version = "0.7"
 
     cargo_file.write_all(buf.as_bytes())?;
 
-    fs::create_dir(bevy_folder.to_owned() + "/" + &CONFIG_FOLDER.to_owned())?;
+    fs::create_dir(bevy_folder.to_owned() + "/" + CONFIG_FOLDER)?;
 
-    let mut cargo_config_file = File::create(bevy_folder.to_owned() + "/" + &CONFIG_FOLDER.to_owned() + "/config.toml")?;
+    let mut cargo_config_file =
+        File::create(bevy_folder.to_owned() + "/" + CONFIG_FOLDER + "/config.toml")?;
     let ccf_buf = r#"[target.x86_64-pc-windows-msvc]
 linker = "rust-lld.exe"
 rustflags = ["-Zshare-generics=off"]"#;
 
     cargo_config_file.write_all(ccf_buf.as_bytes())?;
 
-    fs::create_dir(bevy_folder.to_owned() + "/" + &SRC_FOLDER.to_owned())?;
+    fs::create_dir(bevy_folder.to_owned() + "/" + SRC_FOLDER)?;
 
     //Write plugin or main/game
     let bevy_type_filename = match model.meta.bevy_type {
@@ -575,25 +595,29 @@ rustflags = ["-Zshare-generics=off"]"#;
         _ => "/lib.rs",
     };
     let mut bevy_lib_file =
-        File::create(bevy_folder.to_owned() + "/" + &SRC_FOLDER.to_owned() + bevy_type_filename)?;
+        File::create(bevy_folder.to_owned() + "/" + SRC_FOLDER + bevy_type_filename)?;
 
-    let import_deps = model.plugins.iter().map(|d| {
-        let mut s = "".to_owned();
-        for b in d.dependencies.iter(){
-            for c in b.crate_paths.iter(){
-                s.push_str(&format!("use {}::{};\n", b.crate_name,c));
+    let import_deps = model
+        .plugins
+        .iter()
+        .map(|d| {
+            let mut s = "".to_owned();
+            for b in d.dependencies.iter() {
+                for c in b.crate_paths.iter() {
+                    s.push_str(&format!("use {}::{};\n", b.crate_name, c));
+                }
             }
-        }
-        s.to_string()
-    }).collect::<Vec<String>>().join("");
+            s.to_string()
+        })
+        .collect::<Vec<String>>()
+        .join("");
 
     let _ = bevy_lib_file
         .write("#![cfg_attr(not(debug_assertions), windows_subsystem = \"windows\")]\nuse bevy::prelude::*;\n".as_bytes());
 
-    let _ = bevy_lib_file
-        .write((import_deps + "\n").as_bytes());
+    let _ = bevy_lib_file.write((import_deps + "\n").as_bytes());
 
-    if model.meta.bevy_type.eq(&BevyType::App){
+    if model.meta.bevy_type.eq(&BevyType::App) {
         let _ = bevy_lib_file.write(("#[bevy_main]\n").as_bytes());
     }
 
@@ -604,13 +628,11 @@ rustflags = ["-Zshare-generics=off"]"#;
     if !model.examples.is_empty() {
         fs::create_dir(bevy_folder.to_owned() + "/" + "examples")?;
         for example in model.examples {
-            let mut bevy_example_file = File::create(
-                bevy_folder.to_owned() + "/examples/" + &example.meta.name + ".rs",
-            )?;
+            let mut bevy_example_file =
+                File::create(bevy_folder.to_owned() + "/examples/" + &example.meta.name + ".rs")?;
             bevy_example_file.write_all(example.generate().to_string().as_bytes())?;
         }
     }
 
-    
     Ok(())
 }

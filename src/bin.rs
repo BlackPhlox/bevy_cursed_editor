@@ -13,8 +13,7 @@ struct Cli {
 }
 
 #[derive(clap::ArgEnum, Clone)]
-enum Template
-{
+enum Template {
     Default,
     Plugin,
     Basic2D,
@@ -27,8 +26,7 @@ enum Template
 //3D : Very basic 3D game
 
 #[derive(clap::ArgEnum, PartialEq, Clone)]
-enum Commands
-{
+enum Commands {
     Default,
     Code,
     Clean,
@@ -47,7 +45,7 @@ impl FromStr for Commands {
             "code" => Commands::Code,
             "clean" => Commands::Clean,
             "release" => Commands::Release,
-            _ => Commands::Default
+            _ => Commands::Default,
         })
     }
 
@@ -56,7 +54,7 @@ impl FromStr for Commands {
 
 fn main() {
     let args = Cli::parse();
-    
+
     let bevy_model = match args.template {
         Template::Default => create_default_template(),
         Template::Plugin => create_plugin_template(),
@@ -73,19 +71,19 @@ fn main() {
 
     let _ = write_to_file(bevy_model.clone());
 
-    if args.commands.contains(&Commands::Clean){
+    if args.commands.contains(&Commands::Clean) {
         cmd_clean(bevy_model.clone());
     }
-    
-    if args.commands.contains(&Commands::Default){
+
+    if args.commands.contains(&Commands::Default) {
         cmd_default(bevy_model.clone(), false);
     }
-    
-    if args.commands.contains(&Commands::Release){
+
+    if args.commands.contains(&Commands::Release) {
         cmd_release(bevy_model.clone());
     }
 
-    if args.commands.contains(&Commands::Code){
+    if args.commands.contains(&Commands::Code) {
         cmd_code(bevy_model);
     }
 }
