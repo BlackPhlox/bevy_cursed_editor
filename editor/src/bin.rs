@@ -1,4 +1,7 @@
-use bevy_codegen::{create_plugin_template, write_to_file, cmd_clean, cmd_default, cmd_release, cmd_code, create_default_template};
+use bevy_codegen::{
+    cmd_clean, cmd_code, cmd_default, cmd_release, create_default_template, create_plugin_template,
+    write_to_file,
+};
 use clap::Parser;
 use std::str::FromStr;
 
@@ -35,7 +38,7 @@ enum Commands {
     Code,
     Clean,
     Release,
-    Editor
+    Editor,
 }
 //Commands
 //cmd default - Does the whole process except for the clean, release and code cmd

@@ -132,7 +132,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    camera: Query<(Entity, &Camera), With<Camera3d>>,
+    camera: Query<Entity, With<Camera3d>>,
 ) {
     // plane
     commands.spawn_bundle(PbrBundle {
@@ -158,7 +158,7 @@ fn setup(
         ..default()
     });
 
-    for (e, c) in camera.iter() {
+    for e in camera.iter() {
         commands
             .entity(e)
             .insert_bundle(bevy_mod_picking::PickingCameraBundle::default())
