@@ -2,6 +2,10 @@ use bevy_codegen::{create_plugin_template, write_to_file, cmd_clean, cmd_default
 use clap::Parser;
 use std::str::FromStr;
 
+use crate::ui::start_editor;
+
+pub mod ui;
+
 /// Select what bevy project to generate
 #[derive(Parser)]
 struct Cli {
@@ -89,6 +93,7 @@ fn main() {
     }
 
     if args.commands.contains(&Commands::Editor) {
-        println!("Hello world!");
+        println!("Starting editor");
+        start_editor();
     }
 }
