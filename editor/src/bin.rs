@@ -1,4 +1,4 @@
-use bevy_cg_lib::*;
+use bevy_codegen::{create_plugin_template, write_to_file, cmd_clean, cmd_default, cmd_release, cmd_code, create_default_template};
 use clap::Parser;
 use std::str::FromStr;
 
@@ -31,6 +31,7 @@ enum Commands {
     Code,
     Clean,
     Release,
+    Editor
 }
 //Commands
 //cmd default - Does the whole process except for the clean, release and code cmd
@@ -85,5 +86,9 @@ fn main() {
 
     if args.commands.contains(&Commands::Code) {
         cmd_code(bevy_model);
+    }
+
+    if args.commands.contains(&Commands::Editor) {
+        println!("Hello world!");
     }
 }

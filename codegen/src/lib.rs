@@ -392,7 +392,7 @@ pub fn cmd_build(model: BevyModel) {
 
     println!("update");
     let _update = Command::new("cargo")
-        .arg("+nightly")
+        //.arg("+nightly")
         .arg("update")
         .current_dir(path.clone())
         .status() //output()
@@ -400,7 +400,7 @@ pub fn cmd_build(model: BevyModel) {
 
     println!("build");
     let _build = Command::new("cargo")
-        .arg("+nightly")
+        //.arg("+nightly")
         .arg("build")
         .current_dir(path.clone())
         .status() //output()
@@ -408,7 +408,7 @@ pub fn cmd_build(model: BevyModel) {
 
     println!("fix");
     let _fix = Command::new("cargo")
-        .arg("+nightly")
+        //.arg("+nightly")
         .arg("clippy")
         .arg("--fix")
         .arg("--allow-no-vcs")
@@ -418,7 +418,7 @@ pub fn cmd_build(model: BevyModel) {
 
     println!("clippy");
     let _clippy = Command::new("cargo")
-        .arg("+nightly")
+        //.arg("+nightly")
         .arg("clippy")
         .arg("--")
         .arg("-D")
@@ -436,13 +436,13 @@ pub fn cmd_default(model: BevyModel, spawn: bool) {
         println!("run");
         if spawn {
             let _run = Command::new("cargo")
-                .arg("+nightly")
+                //.arg("+nightly")
                 .arg("run")
                 .current_dir(path.clone())
                 .spawn();
         } else {
             let _run = Command::new("cargo")
-                .arg("+nightly")
+                //.arg("+nightly")
                 .arg("run")
                 .current_dir(path.clone())
                 .status() //output()
@@ -454,7 +454,7 @@ pub fn cmd_default(model: BevyModel, spawn: bool) {
     for example in model.examples {
         println!("Running {}", example.meta.name);
         let _run = Command::new("cargo")
-            .arg("+nightly")
+            //.arg("+nightly")
             .arg("run")
             .arg("--example")
             .arg(example.meta.name)

@@ -1,7 +1,10 @@
-# bevy_cg_editor
+# bevy_cursed_editor👻
+
+## [bevy_codegen 🚧](/codegen/) + [bevy_codegen_editor 📝](/editor/)= 👻
 
 ## What is it?
-bevy cg (codegen) editor is an editor for a serializable bevy format.
+
+bevy codegen is a base library for generating bevy code and provide a serializable bevy format.
 Use an API to create, save and load bevy code, ideally using a gui like [egui](https://github.com/emilk/egui) at some point or it could be integrated with [bevy_editor_pls](https://github.com/jakobhellermann/bevy_editor_pls).
 
 ## Usage
