@@ -38,28 +38,28 @@ impl Display for BevyModel {
         let _ = writeln!(f, "       {:?}", &self.meta);
 
         let _ = writeln!(f, "   Components:");
-        (&self.components).iter().for_each(|d| {
+        self.components.iter().for_each(|d| {
             let _ = writeln!(f, "       {}", d.name);
         });
 
         let _ = writeln!(f);
 
         let _ = writeln!(f, "   Startup Systems:");
-        (&self.startup_systems).iter().for_each(|d| {
+        self.startup_systems.iter().for_each(|d| {
             let _ = writeln!(f, "       {}", d.name);
         });
 
         let _ = writeln!(f);
 
         let _ = writeln!(f, "   Runtime Systems:");
-        (&self.systems).iter().for_each(|d| {
+        self.systems.iter().for_each(|d| {
             let _ = writeln!(f, "       {},", d.name);
         });
 
         let _ = writeln!(f);
 
         let _ = writeln!(f, "   Plugins:");
-        (&self.plugins).iter().for_each(|d| {
+        self.plugins.iter().for_each(|d| {
             let _ = writeln!(f, "       {:?},", d);
         });
 
