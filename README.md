@@ -5,11 +5,8 @@
 🚧 Only for experiential purpose 🚧</h3>
 
 <h2><a href="/codegen/">bevy_codegen 🚧</a> + <a href="/editor/">bevy_codegen_editor 📝</a>= 👻</h2>
-</div></br>
-
-## 
-
-## `bevy_codegen`, what is it?
+</div>
+<h2> <code>bevy_codegen</code>, what is it? </h2>
 
 bevy codegen is a library for generating bevy code and provide a serializable bevy format.
 Use an API to create, save and load bevy code, ideally using a gui like [egui](https://github.com/emilk/egui) at some point or it could be integrated with [bevy_editor_pls](https://github.com/jakobhellermann/bevy_editor_pls).
