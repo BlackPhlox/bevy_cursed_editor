@@ -4,7 +4,7 @@
 <h3>⚠ Warning ⚠<br>
 🚧 Only for experiential purpose 🚧</h3>
 
-<h2><a href="/codegen/">bevy_codegen 🚧</a> + [bevy_codegen_editor 📝](/editor/)= 👻</h2>
+<h2><a href="/codegen/">bevy_codegen 🚧</a> + <a href="/editor/">bevy_codegen_editor 📝</a>= 👻</h2>
 </div></br>
 
 ## 
