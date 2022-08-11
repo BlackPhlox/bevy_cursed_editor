@@ -2,10 +2,13 @@
 
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
 use bevy_codegen::{
-    cmd_default, cmd_fmt, create_default_template, create_plugin_template, write_to_file,
-    BevyModel, BevyType, Feature, Meta, PluginDependency,
+    commands::{cmd_default, cmd_fmt},
+    model::{BevyModel, BevyType, Feature, Meta, PluginDependency},
+    templates::{default_game::create_default_template, default_plugin::create_plugin_template},
+    write_to_file,
 };
 use bevy_editor_pls::{
+    default_windows::hierarchy::picking::EditorRayCastSource,
     editor_window::{EditorWindow, EditorWindowContext},
     prelude::*,
 };
@@ -15,14 +18,11 @@ use bevy_transform_gizmo::TransformGizmoPlugin;
 
 pub fn start_editor() {
     App::new()
-        .insert_resource(Msaa { samples: 4 })
         .init_resource::<GameModel>()
         .add_plugins(DefaultPlugins)
         .add_plugin(EditorPlugin)
-        .add_plugin(EguiPlugin)
-        .add_plugins(bevy_mod_picking::DefaultPickingPlugins)
-        .add_plugin(TransformGizmoPlugin::new(Quat::IDENTITY))
-        .add_plugin(InfiniteGridPlugin)
+        //.add_plugin(EguiPlugin)
+        //.add_plugin(InfiniteGridPlugin)
         .add_editor_window::<CursedOverviewWindow>()
         .add_editor_window::<CursedEntitiesWindow>()
         .add_editor_window::<CursedComponentsWindow>()
@@ -53,17 +53,17 @@ pub fn create_default_template_v2() -> BevyModel {
         ..default()
     };
 
-    bevy_model.components.push(bevy_codegen::Component {
+    bevy_model.components.push(bevy_codegen::model::Component {
         name: "Test1".to_string(),
     });
 
-    bevy_model.plugins.push(bevy_codegen::Plugin {
+    bevy_model.plugins.push(bevy_codegen::model::Plugin {
         name: "DefaultPlugins".to_string(),
         is_group: true,
         dependencies: vec![],
     });
 
-    bevy_model.plugins.push(bevy_codegen::Plugin {
+    bevy_model.plugins.push(bevy_codegen::model::Plugin {
         name: "ConfigCam".to_string(),
         is_group: false,
         dependencies: vec![PluginDependency {
@@ -73,7 +73,7 @@ pub fn create_default_template_v2() -> BevyModel {
         }],
     });
 
-    let hw_system = bevy_codegen::System {
+    let hw_system = bevy_codegen::model::System {
         name: "setup".to_string(),
         param: vec![
             ("mut commands".to_string(), "Commands".to_string()),
@@ -83,6 +83,8 @@ pub fn create_default_template_v2() -> BevyModel {
                 "ResMut<Assets<StandardMaterial>>".to_string(),
             ),
         ],
+        visibility: "pub".to_string(),
+        attributes: vec![],
         content: r#"
         // plane
         commands.spawn_bundle(PbrBundle {
@@ -132,7 +134,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    camera: Query<Entity, With<Camera3d>>,
+    mut camera: Query<(Entity, &mut Camera), With<Camera3d>>,
 ) {
     // plane
     commands.spawn_bundle(PbrBundle {
@@ -158,24 +160,31 @@ fn setup(
         ..default()
     });
 
-    for e in camera.iter() {
-        commands
-            .entity(e)
-            .insert_bundle(bevy_mod_picking::PickingCameraBundle::default())
-            .insert(bevy_transform_gizmo::GizmoPickSource::default());
-    }
+    let mut a = camera.iter().count();
+
+    /*for (e, mut c) in &mut camera {
+        /*commands
+        .entity(e)
+        .insert_bundle(bevy_mod_picking::PickingCameraBundle::default())
+        .insert(bevy_transform_gizmo::GizmoPickSource::default());*/
+        if a > 0 {
+            c.priority = a as isize;
+            a -= 1;
+        } else {
+            c.is_active = true;
+        }
+    }*/
 
     // camera
     /*commands
     .spawn_bundle(Camera3dBundle {
-        //camera: Camera { is_active : false, ..Default::default() },
         transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
-    })
-    .insert_bundle(bevy_mod_picking::PickingCameraBundle::default())
+    }).insert(EditorRayCastSource::new());*/
+    /* .insert_bundle(bevy_mod_picking::PickingCameraBundle::default())
     .insert(bevy_transform_gizmo::GizmoPickSource::default());*/
 
-    commands.spawn_bundle(InfiniteGridBundle::default());
+    //commands.spawn_bundle(InfiniteGridBundle::default());
 }
 
 /*

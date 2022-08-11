@@ -1,5 +1,6 @@
 use bevy_codegen::{
-    cmd_clean, cmd_code, cmd_default, cmd_release, create_default_template, create_plugin_template,
+    commands::{cmd_clean, cmd_code, cmd_default, cmd_release},
+    templates::{default_game::create_default_template, default_plugin::create_plugin_template},
     write_to_file,
 };
 use clap::Parser;

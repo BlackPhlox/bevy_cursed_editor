@@ -1,71 +1,15 @@
 extern crate codegen;
 use codegen::{Function, Scope, Struct};
-use serde::{Deserialize, Serialize};
+use model::{BevyModel, BevyType, Feature};
 use std::{
-    fmt::Display,
     fs::{self, File},
     io::Write,
     path::Path,
-    process::Command,
 };
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug)]
-pub struct BevyModel {
-    pub plugins: Vec<Plugin>,
-    pub components: Vec<Component>,
-    pub startup_systems: Vec<System>,
-    pub systems: Vec<System>,
-    pub bevy_settings: Settings,
-    pub meta: Meta,
-    pub examples: Vec<BevyModel>,
-}
-
-/*
-impl Display for BevyModel {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let _ = writeln!(f, "{:?}", &self);
-        Ok(())
-    }
-}
-*/
-
-impl Display for BevyModel {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let _ = writeln!(f, "BevyModel:");
-
-        let _ = writeln!(f, "   Meta:");
-
-        let _ = writeln!(f, "       {:?}", &self.meta);
-
-        let _ = writeln!(f, "   Components:");
-        self.components.iter().for_each(|d| {
-            let _ = writeln!(f, "       {}", d.name);
-        });
-
-        let _ = writeln!(f);
-
-        let _ = writeln!(f, "   Startup Systems:");
-        self.startup_systems.iter().for_each(|d| {
-            let _ = writeln!(f, "       {}", d.name);
-        });
-
-        let _ = writeln!(f);
-
-        let _ = writeln!(f, "   Runtime Systems:");
-        self.systems.iter().for_each(|d| {
-            let _ = writeln!(f, "       {},", d.name);
-        });
-
-        let _ = writeln!(f);
-
-        let _ = writeln!(f, "   Plugins:");
-        self.plugins.iter().for_each(|d| {
-            let _ = writeln!(f, "       {:?},", d);
-        });
-
-        Ok(())
-    }
-}
+pub mod commands;
+pub mod model;
+pub mod templates;
 
 impl BevyModel {
     pub fn generate(&self) -> Scope {
@@ -111,147 +55,12 @@ impl BevyModel {
         }
 
         for system in &self.startup_systems {
-            scope.create_query(&system.name, system.param.clone(), &system.content);
+            scope.create_query(&system);
         }
         for system in &self.systems {
-            scope.create_query(&system.name, system.param.clone(), &system.content);
+            scope.create_query(&system);
         }
         scope
-    }
-}
-
-#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug)]
-pub enum BevyType {
-    App,
-    Plugin(String),
-    PluginGroup(String),
-    Example,
-}
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Meta {
-    pub name: String,
-    pub bevy_type: BevyType,
-}
-
-impl Default for Meta {
-    fn default() -> Self {
-        Self {
-            name: "bevy_default_meta".to_string(),
-            bevy_type: BevyType::App,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct System {
-    pub name: String,
-    pub param: Vec<(String, String)>,
-    pub content: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Component {
-    pub name: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Plugin {
-    pub name: String,
-    pub is_group: bool,
-    pub dependencies: Vec<PluginDependency>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Default, Debug)]
-pub struct PluginDependency {
-    pub crate_name: String,
-    pub crate_version: String,
-    pub crate_paths: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Default, Debug)]
-pub struct Settings {
-    pub features: Vec<Feature>,
-    pub dev_features: Vec<Feature>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub enum Feature {
-    Default,
-    BevyAudio,
-    BevyGilrs,
-    BevyWinit,
-    Render,
-    Png,
-    Hdr,
-    Vorbis,
-    X11,
-    FilesystemWatcher,
-    TraceChrome,
-    TraceTracy,
-    Wayland,
-    WgpuTrace,
-    BevyCiTesting,
-    BevySprite,
-    Dynamic,
-    BevyUi,
-    Tga,
-    Serialize,
-    Mp3,
-    BevyCorePipeline,
-    Wav,
-    Trace,
-    SubpixelGlyphAtlas,
-    Bmp,
-    BevyGltf,
-    Dds,
-    BevyDynamicPlugin,
-    BevyRender,
-    BevyText,
-    Flac,
-    BevyPbr,
-    Jpeg,
-    BevyDylib,
-}
-
-impl Feature {
-    fn to_feature(&self) -> &'static str {
-        match self {
-            Feature::Default => "default",
-            Feature::BevyAudio => "bevy_audio",
-            Feature::BevyGilrs => "bevy_gilrs",
-            Feature::BevyWinit => "bevy_winit",
-            Feature::Render => "render",
-            Feature::Png => "png",
-            Feature::Hdr => "hdr",
-            Feature::Vorbis => "vorbis",
-            Feature::X11 => "x11",
-            Feature::FilesystemWatcher => "filesystem_watcher",
-            Feature::TraceChrome => "trace_chrome",
-            Feature::TraceTracy => "trace_tracy",
-            Feature::Wayland => "wayland",
-            Feature::WgpuTrace => "wgpu_trace",
-            Feature::BevyCiTesting => "bevy_ci_testing",
-            Feature::BevySprite => "bevy_sprite",
-            Feature::Dynamic => "dynamic",
-            Feature::BevyUi => "bevy_ui",
-            Feature::Tga => "tga",
-            Feature::Serialize => "serialize",
-            Feature::Mp3 => "mp3",
-            Feature::BevyCorePipeline => "bevy_core_pipeline",
-            Feature::Wav => "wav",
-            Feature::Trace => "trace",
-            Feature::SubpixelGlyphAtlas => "subpixel_glyph_atlas",
-            Feature::Bmp => "bmp",
-            Feature::BevyGltf => "bevy_gltf",
-            Feature::Dds => "dds",
-            Feature::BevyDynamicPlugin => "bevy_dynamic_plugin",
-            Feature::BevyRender => "bevy_render",
-            Feature::BevyText => "bevy_text",
-            Feature::Flac => "flac",
-            Feature::BevyPbr => "bevy_pbr",
-            Feature::Jpeg => "jpeg",
-            Feature::BevyDylib => "bevy_dylib",
-        }
     }
 }
 
@@ -260,12 +69,7 @@ trait BevyCodegen {
 
     fn create_plugin(&mut self, name: &str, is_group: bool, content: &str) -> &mut Function;
 
-    fn create_query(
-        &mut self,
-        name: &str,
-        args: Vec<(String, String)>,
-        content: &str,
-    ) -> &mut Function;
+    fn create_query(&mut self, system: &crate::model::System) -> &mut Function;
 
     fn create_component(&mut self, name: &str) -> &mut Struct;
 }
@@ -290,197 +94,21 @@ impl BevyCodegen for Scope {
             .line(";")
     }
 
-    fn create_query(
-        &mut self,
-        name: &str,
-        args: Vec<(String, String)>,
-        content: &str,
-    ) -> &mut Function {
-        let mut a = self.new_fn(name);
-        for (name, ty) in args {
-            a = a.arg(&name, ty);
+    fn create_query(&mut self, system: &crate::model::System) -> &mut Function {
+        let mut fun = self.new_fn(system.name.as_str());
+        for (name, ty) in &system.param {
+            fun = fun.arg(&name, ty);
         }
-        a.line(content)
+        fun.vis(&system.visibility);
+        for att in &system.attributes {
+            fun.attr(att);
+        }
+        fun.line(system.content.clone())
     }
 
     fn create_component(&mut self, name: &str) -> &mut Struct {
         self.new_struct(name).derive("Component")
     }
-}
-
-pub fn create_default_template() -> BevyModel {
-    let mut bevy_model = BevyModel {
-        meta: Meta {
-            name: "bevy_test".to_string(),
-            bevy_type: BevyType::App,
-        },
-        ..Default::default()
-    };
-
-    bevy_model.components.push(Component {
-        name: "Test1".to_string(),
-    });
-
-    let hw_system = System {
-        name: "hello_world".to_string(),
-        param: Vec::new(),
-        content: "println!(\"Hello World!\");".to_string(),
-    };
-    bevy_model.startup_systems.push(hw_system);
-
-    bevy_model.bevy_settings.features.push(Feature::Dynamic);
-
-    bevy_model
-}
-
-pub fn create_plugin_template() -> BevyModel {
-    let mut bevy_model = BevyModel {
-        meta: Meta {
-            name: "bevy_test".to_string(),
-            bevy_type: BevyType::Plugin("BevyTest".to_string()),
-        },
-        examples: vec![BevyModel {
-            meta: Meta {
-                name: "example_test".to_string(),
-                bevy_type: BevyType::Example,
-            },
-            plugins: vec![Plugin {
-                name: "BevyTest".to_string(),
-                is_group: false,
-                dependencies: vec![],
-            }],
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
-    /*bevy_model.bevy_settings.features.push(Feature::Render);
-
-    bevy_model.plugins.push(Plugin {
-        name: "DefaultPlugins".to_string(),
-        is_group: true,
-    });*/
-
-    bevy_model.components.push(Component {
-        name: "Test1".to_string(),
-    });
-
-    let hw_system = System {
-        name: "hello_world".to_string(),
-        param: Vec::new(),
-        content: "println!(\"Hello World From Plugin!\");".to_string(),
-    };
-    bevy_model.startup_systems.push(hw_system);
-
-    bevy_model
-}
-
-pub fn cmd_fmt(model: BevyModel) {
-    let path = model.meta.name;
-    println!("fmt");
-    let _fmt = Command::new("cargo")
-        .arg("fmt")
-        .arg("--all")
-        .current_dir(path)
-        .status() //output()
-        .expect("failed to execute cargo fmt");
-}
-
-pub fn cmd_build(model: BevyModel) {
-    cmd_fmt(model.clone());
-    let path = model.meta.name;
-
-    println!("update");
-    let _update = Command::new("cargo")
-        //.arg("+nightly")
-        .arg("update")
-        .current_dir(path.clone())
-        .status() //output()
-        .expect("failed to execute cargo update");
-
-    println!("build");
-    let _build = Command::new("cargo")
-        //.arg("+nightly")
-        .arg("build")
-        .current_dir(path.clone())
-        .status() //output()
-        .expect("failed to execute cargo build");
-
-    println!("fix");
-    let _fix = Command::new("cargo")
-        //.arg("+nightly")
-        .arg("clippy")
-        .arg("--fix")
-        .arg("--allow-no-vcs")
-        .current_dir(path.clone())
-        .status() //output()
-        .expect("failed to execute cargo fix");
-
-    println!("clippy");
-    let _clippy = Command::new("cargo")
-        //.arg("+nightly")
-        .arg("clippy")
-        .arg("--")
-        .arg("-D")
-        .arg("warnings")
-        .current_dir(path)
-        .status() //output()
-        .expect("failed to execute cargo clippy");
-}
-
-pub fn cmd_default(model: BevyModel, spawn: bool) {
-    cmd_build(model.clone());
-    let path = model.meta.name;
-
-    if let BevyType::App = model.meta.bevy_type {
-        println!("run");
-        if spawn {
-            let _run = Command::new("cargo")
-                //.arg("+nightly")
-                .arg("run")
-                .current_dir(path.clone())
-                .spawn();
-        } else {
-            let _run = Command::new("cargo")
-                //.arg("+nightly")
-                .arg("run")
-                .current_dir(path.clone())
-                .status() //output()
-                .expect("failed to execute cargo run");
-        }
-    }
-
-    println!("example(s)");
-    for example in model.examples {
-        println!("Running {}", example.meta.name);
-        let _run = Command::new("cargo")
-            //.arg("+nightly")
-            .arg("run")
-            .arg("--example")
-            .arg(example.meta.name)
-            .current_dir(path.clone())
-            .status() //output()
-            .expect("failed to execute cargo run");
-    }
-}
-
-pub fn cmd_code(model: BevyModel) {
-    let path = model.meta.name;
-    //Open generated project in VSCode
-    println!("code");
-    let _code = Command::new("code")
-        .arg(".")
-        .current_dir(path)
-        .status() //output()
-        .expect("failed to open vscode");
-}
-
-pub fn cmd_clean(_model: BevyModel) {
-    println!("clean");
-}
-
-pub fn cmd_release(_model: BevyModel) {
-    println!("release");
 }
 
 pub fn feature_write(features: &Vec<Feature>) -> String {
@@ -543,6 +171,8 @@ name = "{meta_name}"
 version = "0.1.0"
 edition = "2021"
 
+[workspace]
+
 # Enable only a small amount of optimization in debug mode
 [profile.dev]
 opt-level = 1
@@ -557,16 +187,16 @@ lto = "thin"
 codegen-units = 1
 
 [target.'cfg(target_os = "linux")'.dependencies]
-winit = {{ version = "0.26.1", features=["x11"]}}
+winit = {{ version = "0.27", features=["x11"]}}
 
 [dependencies]
 {crate_deps}
 [dependencies.bevy]
-version = "0.7"
+version = "0.8"
 {features}
 
 [dev-dependencies.bevy]
-version = "0.7"
+version = "0.8"
 {dev_features}
 
 "#,
