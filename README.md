@@ -1,5 +1,8 @@
 # bevy_cursed_editor👻
 
+
+<h2>Notice: <code>bevy_cursed_editor</code> is moving to <a href="https://github.com/BlackPhlox/potoo">potoo</a> 🚚💨 </h2>
+
 <div align="center">
 <h3>⚠ Warning ⚠<br>
 🚧 Only for experiential purpose 🚧</h3>
