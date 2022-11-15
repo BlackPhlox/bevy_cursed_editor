@@ -35,7 +35,7 @@ pub fn start_editor() {
 }
 
 fn setup_non_send(world: &mut World) {
-    let mut target = GameModel {
+    let mut target = ProjectModel {
         model: BevyModel {
             plugins: vec![],
             components: vec![],
@@ -61,7 +61,7 @@ fn setup_non_send(world: &mut World) {
     world.insert_non_send_resource(target);
 }
 
-impl GameModel {
+impl ProjectModel {
     fn apply(&mut self, add : Add){
         self.history.apply(&mut self.model, add);
     }
@@ -76,7 +76,7 @@ impl GameModel {
 }
 
 #[derive(Debug)]
-pub struct GameModel {
+pub struct ProjectModel {
     model: BevyModel,
     history: History<Add>
 }
@@ -114,7 +114,7 @@ impl Action for Add {
     }
 }
 
-impl Default for GameModel {
+impl Default for ProjectModel {
     fn default() -> Self {
         Self {
             model: create_default_template_v2(),
@@ -301,12 +301,12 @@ impl EditorWindow for CursedOverviewWindow {
             ui.menu_button("File", |ui| {
                 ui.menu_button("New Project", |ui| {
                     if ui.button("Template App").clicked() {
-                        let mut gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
+                        let mut gm = world.get_non_send_resource_mut::<ProjectModel>().unwrap();
                         gm.model = create_default_template();
                         let _ = write_to_file(gm.model.clone());
                     }
                     if ui.button("Template Plugin").clicked() {
-                        let mut gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
+                        let mut gm = world.get_non_send_resource_mut::<ProjectModel>().unwrap();
                         gm.model = create_plugin_template();
                         let _ = write_to_file(gm.model.clone());
                     }
@@ -315,7 +315,7 @@ impl EditorWindow for CursedOverviewWindow {
                 ui.label("Save Project");
                 ui.label("Save As Project");
                 if ui.button("Import Json").clicked() {
-                    let mut gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
+                    let mut gm = world.get_non_send_resource_mut::<ProjectModel>().unwrap();
                     let m = serde_json::from_str::<BevyModel>(
                         cli_clipboard::get_contents().unwrap().as_str(),
                     );
@@ -326,7 +326,7 @@ impl EditorWindow for CursedOverviewWindow {
                     }
                 }
                 if ui.button("Export Json").clicked() {
-                    let gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
+                    let gm = world.get_non_send_resource_mut::<ProjectModel>().unwrap();
                     let m = gm.model.clone();
                     cli_clipboard::set_contents(
                         serde_json::to_string(&m).unwrap().replace("  ", ""),
@@ -336,7 +336,7 @@ impl EditorWindow for CursedOverviewWindow {
                 ui.label("Exit");
             });
             ui.menu_button("Edit", |ui| {
-                let mut target = world.get_non_send_resource_mut::<GameModel>().unwrap();
+                let mut target = world.get_non_send_resource_mut::<ProjectModel>().unwrap();
                 if ui.add_enabled(target.history.can_redo(), egui::Button::new("Redo")).clicked() {
                     target.redo();
                 }
@@ -349,17 +349,17 @@ impl EditorWindow for CursedOverviewWindow {
 
             ui.menu_button("Cargo", |ui| {
                 if ui.button("Fmt").clicked() {
-                    let gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
+                    let gm = world.get_non_send_resource_mut::<ProjectModel>().unwrap();
                     cmd_fmt(gm.model.clone());
                 }
                 if ui.button("Run").clicked() {
-                    let gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
+                    let gm = world.get_non_send_resource_mut::<ProjectModel>().unwrap();
                     cmd_default(gm.model.clone(), true);
                 }
             });
         });
 
-        let gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
+        let gm = world.get_non_send_resource_mut::<ProjectModel>().unwrap();
         let m = gm.model.clone();
         ui.label(m.to_string());
     }
@@ -377,7 +377,7 @@ impl EditorWindow for CursedEntitiesWindow {
 
         ui.menu_button("Entity", |ui| {
             ui.menu_button("Spawn using existing system", |ui| {
-                let gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
+                let gm = world.get_non_send_resource_mut::<ProjectModel>().unwrap();
                 let m = gm.model.clone();
 
                 ui.label("Startup Systems:");
@@ -435,7 +435,7 @@ impl EditorWindow for CursedComponentsWindow {
         let mut a: bool = true;
         ui.checkbox(&mut a, "Show project components only");
         ui.checkbox(&mut a, "Show used components only");
-        let gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
+        let gm = world.get_non_send_resource_mut::<ProjectModel>().unwrap();
         let m = gm.model.clone();
         m.components.iter().for_each(|s| {
             ui.label(s.name.as_str());
@@ -460,7 +460,7 @@ impl EditorWindow for CursedSystemsWindow {
                 println!("Add system");
             }
         });
-        let gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
+        let gm = world.get_non_send_resource_mut::<ProjectModel>().unwrap();
         let m = gm.model.clone();
         m.startup_systems.iter().for_each(|s| {
             ui.label(s.name.as_str());
