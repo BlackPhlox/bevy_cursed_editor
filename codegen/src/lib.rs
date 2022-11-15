@@ -1,5 +1,5 @@
 extern crate codegen;
-use codegen::{Function, Scope, Struct};
+use codegen::{Field, Function, Scope, Struct};
 use model::{BevyModel, BevyType, Feature};
 use std::{
     fs::{self, File},
@@ -51,14 +51,14 @@ impl BevyModel {
         };
 
         for component in &self.components {
-            scope.create_component(&component.name);
+            scope.create_component(&component.name, component.content.clone());
         }
 
         for system in &self.startup_systems {
-            scope.create_query(&system);
+            scope.create_query(system);
         }
         for system in &self.systems {
-            scope.create_query(&system);
+            scope.create_query(system);
         }
         scope
     }
@@ -71,7 +71,7 @@ trait BevyCodegen {
 
     fn create_query(&mut self, system: &crate::model::System) -> &mut Function;
 
-    fn create_component(&mut self, name: &str) -> &mut Struct;
+    fn create_component(&mut self, name: &str, content: Vec<(String, String)>) -> &mut Struct;
 }
 impl BevyCodegen for Scope {
     fn create_app(&mut self, content: &str) -> &mut Function {
@@ -97,7 +97,7 @@ impl BevyCodegen for Scope {
     fn create_query(&mut self, system: &crate::model::System) -> &mut Function {
         let mut fun = self.new_fn(system.name.as_str());
         for (name, ty) in &system.param {
-            fun = fun.arg(&name, ty);
+            fun = fun.arg(name, ty);
         }
         fun.vis(&system.visibility);
         for att in &system.attributes {
@@ -106,8 +106,12 @@ impl BevyCodegen for Scope {
         fun.line(system.content.clone())
     }
 
-    fn create_component(&mut self, name: &str) -> &mut Struct {
-        self.new_struct(name).derive("Component")
+    fn create_component(&mut self, name: &str, content: Vec<(String, String)>) -> &mut Struct {
+        let a = self.new_struct(name);
+        for (n, t) in content.iter() {
+            a.push_field(Field::new(n, t));
+        }
+        a.derive("Component")
     }
 }
 
@@ -192,11 +196,11 @@ winit = {{ version = "0.27", features=["x11"]}}
 [dependencies]
 {crate_deps}
 [dependencies.bevy]
-version = "0.8"
+version = "0.9"
 {features}
 
 [dev-dependencies.bevy]
-version = "0.8"
+version = "0.9"
 {dev_features}
 
 "#,

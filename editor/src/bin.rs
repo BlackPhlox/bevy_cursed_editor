@@ -13,14 +13,14 @@ pub mod ui;
 /// Select what bevy project to generate
 #[derive(Parser)]
 struct Cli {
-    #[clap(arg_enum, default_value_t = Template::Default)]
+    #[clap(value_enum, default_value_t = Template::Default)]
     template: Template,
 
-    #[clap(multiple_occurrences(true), arg_enum)]
+    #[clap(value_enum)]
     commands: Vec<Commands>,
 }
 
-#[derive(clap::ArgEnum, Clone)]
+#[derive(clap::ValueEnum, Clone)]
 enum Template {
     Default,
     Plugin,
@@ -33,7 +33,7 @@ enum Template {
 //2D : Very basic 2D game
 //3D : Very basic 3D game
 
-#[derive(clap::ArgEnum, PartialEq, Clone)]
+#[derive(clap::ValueEnum, PartialEq, Clone)]
 enum Commands {
     Default,
     Code,

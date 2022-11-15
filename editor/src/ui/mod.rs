@@ -3,22 +3,23 @@
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
 use bevy_codegen::{
     commands::{cmd_default, cmd_fmt},
-    model::{BevyModel, BevyType, Feature, Meta, PluginDependency},
+    model::{BevyModel, BevyType, Feature, Meta, PluginDependency, Settings},
     templates::{default_game::create_default_template, default_plugin::create_plugin_template},
     write_to_file,
 };
 use bevy_editor_pls::{
     default_windows::hierarchy::picking::EditorRayCastSource,
     editor_window::{EditorWindow, EditorWindowContext},
-    prelude::*,
+    prelude::*, egui,
 };
 use bevy_egui::EguiPlugin;
-use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGridPlugin};
-use bevy_transform_gizmo::TransformGizmoPlugin;
+use undo::{Action, History};
+//use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGridPlugin};
+//use bevy_transform_gizmo::TransformGizmoPlugin;
 
 pub fn start_editor() {
     App::new()
-        .init_resource::<GameModel>()
+        //.init_resource::<GameModel>()
         .add_plugins(DefaultPlugins)
         .add_plugin(EditorPlugin)
         //.add_plugin(EguiPlugin)
@@ -28,18 +29,96 @@ pub fn start_editor() {
         .add_editor_window::<CursedComponentsWindow>()
         .add_editor_window::<CursedSystemsWindow>()
         .add_plugin(FrameTimeDiagnosticsPlugin)
-        .add_startup_system(setup)
+        .add_startup_system(setup_non_send.label("one"))
+        .add_startup_system(setup.after("one"))
         .run();
 }
 
+fn setup_non_send(world: &mut World) {
+    let mut target = GameModel {
+        model: BevyModel {
+            plugins: vec![],
+            components: vec![],
+            startup_systems: vec![],
+            systems: vec![],
+            bevy_settings: Settings {
+                features: vec![],
+                dev_features: vec![],
+            },
+            meta: Meta {
+                name: "bevy_test".to_string(),
+                bevy_type: BevyType::App,
+            },
+            examples: vec![],
+        },
+        history: History::new()
+    };
+    
+    target.apply(Add(BevyModelAction::Component("Test1".to_string(), vec![])));
+
+    println!("{:?}", target);
+    
+    world.insert_non_send_resource(target);
+}
+
+impl GameModel {
+    fn apply(&mut self, add : Add){
+        self.history.apply(&mut self.model, add);
+    }
+
+    fn redo(&mut self) {
+        self.history.redo(&mut self.model);
+    }
+
+    fn undo(&mut self) {
+        self.history.undo(&mut self.model);
+    }
+}
+
+#[derive(Debug)]
 pub struct GameModel {
     model: BevyModel,
+    history: History<Add>
+}
+
+#[derive(Clone, Debug)]
+enum BevyModelAction {
+    Component(String, Vec<(String, String)>),
+}
+
+#[derive(Clone, Debug)]
+struct Add(BevyModelAction);
+
+impl Action for Add {
+    type Target = BevyModel;
+    type Output = ();
+    type Error = &'static str;
+
+    fn apply(&mut self, s: &mut Self::Target) -> undo::Result<Add> {
+        match &self.0 {
+            BevyModelAction::Component(x, y) => {
+                s.components.push(bevy_codegen::model::Component {
+                    name: x.to_string(),
+                    content: y.to_vec(),
+                });
+            }
+        };
+        Ok(())
+    }
+
+    fn undo(&mut self, s: &mut Self::Target) -> undo::Result<Add> {
+        match self.0 {
+            BevyModelAction::Component(_, _) => s.components.pop(),
+        };
+        Ok(())
+    }
 }
 
 impl Default for GameModel {
     fn default() -> Self {
         Self {
             model: create_default_template_v2(),
+            history: History::new()
         }
     }
 }
@@ -55,6 +134,7 @@ pub fn create_default_template_v2() -> BevyModel {
 
     bevy_model.components.push(bevy_codegen::model::Component {
         name: "Test1".to_string(),
+        content: vec![],
     });
 
     bevy_model.plugins.push(bevy_codegen::model::Plugin {
@@ -63,7 +143,7 @@ pub fn create_default_template_v2() -> BevyModel {
         dependencies: vec![],
     });
 
-    bevy_model.plugins.push(bevy_codegen::model::Plugin {
+    /*bevy_model.plugins.push(bevy_codegen::model::Plugin {
         name: "ConfigCam".to_string(),
         is_group: false,
         dependencies: vec![PluginDependency {
@@ -71,7 +151,7 @@ pub fn create_default_template_v2() -> BevyModel {
             crate_version: "0.3.0".into(),
             crate_paths: vec!["*".into()],
         }],
-    });
+    });*/
 
     let hw_system = bevy_codegen::model::System {
         name: "setup".to_string(),
@@ -87,20 +167,20 @@ pub fn create_default_template_v2() -> BevyModel {
         attributes: vec![],
         content: r#"
         // plane
-        commands.spawn_bundle(PbrBundle {
+        commands.spawn(PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Plane { size: 5.0 })),
             material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
             ..default()
         });
         // cube
-        commands.spawn_bundle(PbrBundle {
+        commands.spawn(PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
             material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
             transform: Transform::from_xyz(0.0, 0.5, 0.0),
             ..default()
         });
         // light
-        commands.spawn_bundle(PointLightBundle {
+        commands.spawn(PointLightBundle {
             point_light: PointLight {
                 intensity: 1500.0,
                 shadows_enabled: true,
@@ -110,7 +190,7 @@ pub fn create_default_template_v2() -> BevyModel {
             ..default()
         });
         // camera
-        commands.spawn_bundle(PerspectiveCameraBundle {
+        commands.spawn(Camera3dBundle {
             transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
             ..default()
         });"#
@@ -136,21 +216,22 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut camera: Query<(Entity, &mut Camera), With<Camera3d>>,
 ) {
+
     // plane
-    commands.spawn_bundle(PbrBundle {
+    commands.spawn(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Plane { size: 5.0 })),
         material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
         ..default()
     });
     // cube
-    commands.spawn_bundle(PbrBundle {
+    commands.spawn(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
         material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
         transform: Transform::from_xyz(0.0, 0.5, 0.0),
         ..default()
     });
     // light
-    commands.spawn_bundle(PointLightBundle {
+    commands.spawn(PointLightBundle {
         point_light: PointLight {
             intensity: 1500.0,
             shadows_enabled: true,
@@ -160,7 +241,7 @@ fn setup(
         ..default()
     });
 
-    let mut a = camera.iter().count();
+    //let mut a = camera.iter().count();
 
     /*for (e, mut c) in &mut camera {
         /*commands
@@ -220,12 +301,12 @@ impl EditorWindow for CursedOverviewWindow {
             ui.menu_button("File", |ui| {
                 ui.menu_button("New Project", |ui| {
                     if ui.button("Template App").clicked() {
-                        let mut gm = world.get_resource_mut::<GameModel>().unwrap();
+                        let mut gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
                         gm.model = create_default_template();
                         let _ = write_to_file(gm.model.clone());
                     }
                     if ui.button("Template Plugin").clicked() {
-                        let mut gm = world.get_resource_mut::<GameModel>().unwrap();
+                        let mut gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
                         gm.model = create_plugin_template();
                         let _ = write_to_file(gm.model.clone());
                     }
@@ -234,7 +315,7 @@ impl EditorWindow for CursedOverviewWindow {
                 ui.label("Save Project");
                 ui.label("Save As Project");
                 if ui.button("Import Json").clicked() {
-                    let mut gm = world.get_resource_mut::<GameModel>().unwrap();
+                    let mut gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
                     let m = serde_json::from_str::<BevyModel>(
                         cli_clipboard::get_contents().unwrap().as_str(),
                     );
@@ -245,7 +326,7 @@ impl EditorWindow for CursedOverviewWindow {
                     }
                 }
                 if ui.button("Export Json").clicked() {
-                    let gm = world.get_resource_mut::<GameModel>().unwrap();
+                    let gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
                     let m = gm.model.clone();
                     cli_clipboard::set_contents(
                         serde_json::to_string(&m).unwrap().replace("  ", ""),
@@ -254,27 +335,31 @@ impl EditorWindow for CursedOverviewWindow {
                 }
                 ui.label("Exit");
             });
-
             ui.menu_button("Edit", |ui| {
-                ui.label("Redo");
-                ui.label("Undo");
+                let mut target = world.get_non_send_resource_mut::<GameModel>().unwrap();
+                if ui.add_enabled(target.history.can_redo(), egui::Button::new("Redo")).clicked() {
+                    target.redo();
+                }
+                if ui.add_enabled(target.history.can_undo(), egui::Button::new("Undo")).clicked() {
+                    target.undo();
+                }
                 ui.label("History");
                 ui.label("Project Settings");
             });
 
             ui.menu_button("Cargo", |ui| {
                 if ui.button("Fmt").clicked() {
-                    let gm = world.get_resource_mut::<GameModel>().unwrap();
+                    let gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
                     cmd_fmt(gm.model.clone());
                 }
                 if ui.button("Run").clicked() {
-                    let gm = world.get_resource_mut::<GameModel>().unwrap();
+                    let gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
                     cmd_default(gm.model.clone(), true);
                 }
             });
         });
 
-        let gm = world.get_resource_mut::<GameModel>().unwrap();
+        let gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
         let m = gm.model.clone();
         ui.label(m.to_string());
     }
@@ -292,7 +377,7 @@ impl EditorWindow for CursedEntitiesWindow {
 
         ui.menu_button("Entity", |ui| {
             ui.menu_button("Spawn using existing system", |ui| {
-                let gm = world.get_resource_mut::<GameModel>().unwrap();
+                let gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
                 let m = gm.model.clone();
 
                 ui.label("Startup Systems:");
@@ -350,7 +435,7 @@ impl EditorWindow for CursedComponentsWindow {
         let mut a: bool = true;
         ui.checkbox(&mut a, "Show project components only");
         ui.checkbox(&mut a, "Show used components only");
-        let gm = world.get_resource_mut::<GameModel>().unwrap();
+        let gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
         let m = gm.model.clone();
         m.components.iter().for_each(|s| {
             ui.label(s.name.as_str());
@@ -375,7 +460,7 @@ impl EditorWindow for CursedSystemsWindow {
                 println!("Add system");
             }
         });
-        let gm = world.get_resource_mut::<GameModel>().unwrap();
+        let gm = world.get_non_send_resource_mut::<GameModel>().unwrap();
         let m = gm.model.clone();
         m.startup_systems.iter().for_each(|s| {
             ui.label(s.name.as_str());

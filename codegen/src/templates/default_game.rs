@@ -13,7 +13,12 @@ pub fn create_default_template() -> BevyModel {
     };
 
     bevy_model.components.push(Component {
-        name: "Test1".to_string(),
+        name: "Player".to_string(),
+        content: vec![
+            ("velocity".to_string(), "Vec3".to_string()),
+            ("rotation_speed".to_string(), "f32".to_string()),
+            ("shooting_timer".to_string(), "Option<f32>".to_string()),
+        ],
     });
 
     //For asset_server
@@ -29,8 +34,7 @@ pub fn create_default_template() -> BevyModel {
             ("mut commands".to_string(), "Commands".to_string()),
             ("asset_server".to_string(), "Res<AssetServer>".to_string()),
         ],
-        content: 
-r#"
+        content: r#"
 
 commands.spawn_bundle(Camera2dBundle::default());
 
@@ -47,7 +51,8 @@ commands
     shooting_timer: None,
 });
 
-"#.to_string(),
+"#
+        .to_string(),
         visibility: "pub".to_string(),
         attributes: vec![],
     };

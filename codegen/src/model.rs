@@ -47,6 +47,7 @@ pub struct System {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Component {
     pub name: String,
+    pub content: Vec<(String, String)>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

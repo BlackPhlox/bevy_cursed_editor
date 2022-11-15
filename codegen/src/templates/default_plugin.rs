@@ -33,6 +33,7 @@ pub fn create_plugin_template() -> BevyModel {
 
     bevy_model.components.push(Component {
         name: "Test1".to_string(),
+        content: vec![],
     });
 
     let hw_system = System {
