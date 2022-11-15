@@ -427,6 +427,8 @@ impl EditorWindow for CursedComponentsWindow {
         ui.menu_button("Component", |ui| {
             if ui.button("Create").clicked() {
                 println!("Create component");
+                let mut gm = world.get_non_send_resource_mut::<ProjectModel>().unwrap();
+                gm.apply(Add(BevyModelAction::Component("TestComp".to_string(), vec![])));
             }
             if ui.button("Add to entity").clicked() {
                 println!("Add component to entity");
@@ -435,10 +437,11 @@ impl EditorWindow for CursedComponentsWindow {
         let mut a: bool = true;
         ui.checkbox(&mut a, "Show project components only");
         ui.checkbox(&mut a, "Show used components only");
-        let gm = world.get_non_send_resource_mut::<ProjectModel>().unwrap();
-        let m = gm.model.clone();
-        m.components.iter().for_each(|s| {
-            ui.label(s.name.as_str());
+        let mut gm = world.get_non_send_resource_mut::<ProjectModel>().unwrap();
+        gm.model.components.iter_mut().for_each(|s| {
+            if ui.text_edit_singleline(&mut s.name).lost_focus(){
+                //gm.apply(Add(BevyModelAction::Component(s.name.to_string(), vec![])))
+            };
         });
     }
 }
